@@ -1,0 +1,109 @@
+@media (max-width: 480px) {
+    .slider-contrainer{ display: none;}
+    .slider-image{ display: none;}
+    .slider-box{ display: none;}
+    .beach-text{ display: none;}
+    .ski-text{ display: none;}
+    .football-text{ display: none;}
+    .image-box{ display: none;}
+}
+
+
+.slider-contrainer{
+    height: 600px;
+    /* width: 600px; */
+}
+
+.slider-image{
+    height: 950px;
+    width: 100%;
+}
+
+.slider-box{
+    height: 100px;
+}
+
+.beach-text{
+    font-size: 10vw;
+    position: absolute;
+    color: #c3c3c3;
+    /* display: flex; */
+    /* align-items: center; */
+    /* justify-content: center; */
+    /* text-align: center; */
+    /* font-family: "Libre Baskerville", serif; */
+    font-weight: 700;
+  font-style: normal;
+  margin-left: .5%;
+  margin-top: 2.4%;
+  text-shadow: 20px;
+  text-shadow:  -2px -2px 0 #000,
+  0   -2px 0 #000,
+  2px -2px 0 #000,
+  2px  0   0 #000,
+  2px  2px 0 #000,
+  0    2px 0 #000,
+ -2px  2px 0 #000,
+ -2px  0   0 #000;
+ /* font-family: "roboto-mono", monospace;  */
+
+  
+    
+}
+.ski-text{
+    font-size: 12vw;
+    position: absolute;
+    color: #c3c3c3;
+    /* display: flex; */
+    /* align-items: center; */
+    /* justify-content: center; */
+    /* text-align: center; */
+    /* font-family: "Libre Baskerville", serif; */
+    font-weight: 700;
+  font-style: normal;
+  margin-left: 1.1%;
+  text-shadow: 20px;
+  margin-top: 2.4%;
+  text-shadow:  -2px -2px 0 #000,
+  0   -2px 0 #000,
+  2px -2px 0 #000,
+  2px  0   0 #000,
+  2px  2px 0 #000,
+  0    2px 0 #000,
+ -2px  2px 0 #000,
+ -2px  0   0 #000;
+ /* font-family: "roboto-mono", monospace;  */
+  
+    
+}
+.football-text{
+    font-size: 12vw;
+    position: absolute;
+    color: #c3c3c3;
+    /* display: flex; */
+    /* align-items: center; */
+    /* justify-content: center; */
+    /* text-align: center; */
+    /* font-family: "Libre Baskerville", serif; */
+    font-weight: 700;
+  font-style: normal;
+  margin-left: 1%;
+  margin-top: 2.3%;
+  text-shadow: 20px;
+  text-shadow:  -2px -2px 0 #000,
+  0   -2px 0 #000,
+  2px -2px 0 #000,
+  2px  0   0 #000,
+  2px  2px 0 #000,
+  0    2px 0 #000,
+ -2px  2px 0 #000,
+ -2px  0   0 #000;
+  
+    
+}
+
+.image-box{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
