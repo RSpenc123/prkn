@@ -68,3 +68,37 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Web rental flow (`/r/:addressId`)
+
+A QR code on a listed address can link straight to `/r/:addressId`, which shows
+every spot at that address and walks the guest through: pick a spot → choose a
+date/time → sign up or sign in → verify → enter name/car → pay → confirmation.
+
+Everything currently runs on **mock data and stubbed services** so the whole
+flow is clickable with no backend. Here's exactly what's mocked and what's
+needed to make it real:
+
+- **`src/api/client.js`** — every function (`getSpotsByAddress`, `signUp`,
+  `signIn`, `verifyCode`, `saveProfile`, `createBooking`, etc.) is a stand-in
+  for a real API call. Each one has a comment naming the real endpoint it
+  represents and its expected request/response shape. Swap the body of each
+  function for a `fetch()` against your real API — the rest of the app
+  (`src/Pages/Booking/*`) doesn't need to change as long as the shapes match.
+- **`src/api/mockData.js`** — fake addresses/spots. The important thing to
+  carry over to the real backend: spots need an `addressId` (or similar) field
+  so multiple spots at the same address can be grouped and listed together —
+  today's spot data doesn't appear to have that grouping.
+- **Twilio (SMS verification + confirmation text)** — never call Twilio from
+  the browser. `signUp`/`resendCode` should hit your backend, which sends the
+  code via Twilio; `verifyCode` should hit your backend, which checks the code
+  server-side. Same for the "confirmation text" sent after payment.
+- **Stripe (payment)** — never put a Stripe secret key in frontend code. The
+  Payment page (`src/Pages/Booking/Payment.js`) currently has stubbed Apple
+  Pay/Link/card UI with a "Demo" badge and no real charge. To go live: your
+  backend creates a PaymentIntent, the frontend uses Stripe.js/the Payment
+  Element to collect and confirm payment client-side, and `createBooking`
+  becomes a call that finalizes the booking once payment succeeds (ideally
+  driven by a Stripe webhook on the backend, not just the frontend's say-so).
+- No live map/geocoding is wired up yet (not needed for the QR flow); Google
+  Maps can be added later for a "find a spot near me" page.
