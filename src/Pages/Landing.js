@@ -25,6 +25,7 @@ import signup from "../images/signup-slanted.png"
 import spot from "../images/create-spot.png"
 import stripe from "../images/stripe.png"
 import Mobile from "./Mobile.js";
+import AddressSearch from "../components/AddressSearch";
 // import { Carousel } from "../components/Carousel"
 {/* <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" /> */}
 
@@ -93,6 +94,10 @@ export function Landing() {
       </div>
       </section>
 
+      <section className="address-search-section">
+        <h2 className="address-search-title">Find spots at an address</h2>
+        <AddressSearch className="address-search-desktop" />
+      </section>
 
 
 

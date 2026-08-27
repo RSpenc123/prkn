@@ -7,6 +7,7 @@
     .homep2{ display: none;
 
    }
+    .address-search-section{ display: none !important;}
     .qr{ display: none;}
     .qr-text{ display: none;}
     .prkn-text{ display: none;}
@@ -133,11 +134,28 @@
 
 }
 
+.address-search-section{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    text-align: center;
+    background-color: white;
+}
+
+.address-search-title{
+    font-family: "roboto-mono", monospace;
+    font-weight: 700;
+    font-size: 1.8vw;
+    margin-bottom: 16px;
+}
+
 .homep2{
     height: 1200px;
     background: rgb(255,255,255);
     background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(193,193,193,0.9290091036414566) 50%, rgba(255,255,255,1) 100%);
-    margin-top: 50%;
+    margin-top: 20px;
     margin-bottom: -29%;
 
 }

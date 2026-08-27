@@ -14,6 +14,7 @@ import burger from "../images/burger.png"
 import insta from "../images/insta.png"
 import android from "../images/android.png"
 import apple from "../images/apple.png"
+import AddressSearch from "../components/AddressSearch"
 
 
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet"></link>
@@ -52,11 +53,11 @@ export function Mobile() {
             <section className="mobile-pier-section">
   
                 <h1 className="pier"> PRK'n</h1>
-                <div className="pier-button">  <button className="btn-mobile" onClick={()=> newTab('https://onelink.to/c2adab')   }>
-              <p className="download-text-mobile">Download here</p>  
-             </button></div>
-           
-                
+                <div className="pier-button">
+                  <AddressSearch className="address-search-mobile" placeholder="Enter an address" />
+                </div>
+
+
             <img className="mobile-pier" src={pier} alt=""/>
             
             </section>

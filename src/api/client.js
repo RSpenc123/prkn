@@ -28,6 +28,21 @@ function randomId(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// GET /addresses/search?q=...
+// Real backend should geocode/search the query (or just do a text match
+// against listed addresses) and return the matching address record. This
+// is what powers the "search an address" box on the landing page. For now
+// it's a simple substring match against the mock address book below —
+// only "412 Pier Ave..." and "88 Ocean Blvd..." will match anything.
+export function searchAddress(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return delay(null);
+  const match = Object.values(mockAddresses).find((a) =>
+    `${a.line1} ${a.city} ${a.state} ${a.zip}`.toLowerCase().includes(q)
+  );
+  return delay(match ? { addressId: match.id, address: match } : null);
+}
+
 // GET /addresses/:addressId/spots
 // Real backend needs a way to group spots by address (e.g. an `addressId`
 // or `locationId` field on each spot document) — today spots don't appear

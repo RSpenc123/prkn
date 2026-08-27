@@ -15,6 +15,13 @@ export const mockAddresses = {
     state: "CA",
     zip: "90254",
   },
+  "addr_demo_2": {
+    id: "addr_demo_2",
+    line1: "88 Ocean Blvd",
+    city: "Newport Beach",
+    state: "CA",
+    zip: "92661",
+  },
 };
 
 export const mockSpots = [
@@ -66,6 +73,26 @@ export const mockSpots = [
       {
         date: nextDate(2),
         slots: [{ start: "10:00", end: "18:00" }],
+      },
+    ],
+  },
+  {
+    id: "spot_4",
+    addressId: "addr_demo_2",
+    title: "Gated lot spot near the harbor",
+    description:
+      "Gated private lot a short walk from the harbor. Fits any size vehicle, attendant-free entry with a code.",
+    photos: [hostParking, driveway],
+    pricePerHour: 7,
+    status: "available",
+    availability: [
+      {
+        date: nextDate(0),
+        slots: [{ start: "07:00", end: "23:00" }],
+      },
+      {
+        date: nextDate(1),
+        slots: [{ start: "07:00", end: "23:00" }],
       },
     ],
   },
