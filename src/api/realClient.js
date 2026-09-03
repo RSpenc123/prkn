@@ -29,10 +29,10 @@
 //     fields on each Spot. addressId here is a lat/lng pair we synthesize
 //     ourselves (see encodeAddressKey), and "spots at this address" means
 //     "spots within ~60m of that point."
-//   - No dedicated UI field exists yet for phone/vehicle plate when signing
-//     up by email, so createBooking sends empty/0 for whichever of
-//     phone_no / vehicle_number wasn't collected. The backend schema
-//     allows this (those fields are optional).
+//   - Phone number and license plate are collected on the Profile step
+//     (phone only if the user signed up by email — phone signups already
+//     have one). Both stay optional there since the backend schema allows
+//     empty values for them.
 
 const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/$/, "");
 const MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || "";
@@ -314,21 +314,27 @@ export async function createBooking({
   name,
   contact,
   method,
+  phone,
   carMake,
   carModel,
+  vehicleNumber,
   transactionId,
 }) {
   const startEpoch = combineDateTimeToEpoch(date, startTime);
   const endEpoch = combineDateTimeToEpoch(date, endTime);
+  // Phone comes from whichever the user actually provided: their signup
+  // contact if they signed up by phone, otherwise the number collected on
+  // the profile step.
+  const phoneNo = method === "phone" ? contact : phone;
   const res = await request("/api/createBooking", {
     method: "POST",
     body: {
       name,
       email: method === "email" ? contact : "",
-      phone_no: method === "phone" ? Number(contact) || 0 : 0,
+      phone_no: Number(phoneNo) || 0,
       address: "",
       car_model: [carMake, carModel].filter(Boolean).join(" "),
-      vehicle_number: "",
+      vehicle_number: vehicleNumber || "",
       availability_ids: [availabilityId],
       slots: [
         {

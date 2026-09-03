@@ -135,9 +135,6 @@ that's the fix, on the backend side.
   +admin+renter fee stack via the backend's `calculateAmount()`; the
   spot-detail page (`getParkingDetail`) does not. Card prices and the detail
   page's price can legitimately disagree until that's reconciled.
-- **No dedicated UI field yet for phone number (when signing up by email) or
-  license plate.** `createBooking` sends empty/0 for whichever wasn't
-  collected — the backend's schema allows this (those fields are optional).
 - **OTP verification doesn't return a token.** After a successful
   `verifyOtp`, the app silently re-logs-in with the password the user just
   typed (kept briefly in memory/sessionStorage, never sent anywhere except

@@ -174,8 +174,10 @@ export default function Payment() {
         name: profile.name,
         contact: user.contact,
         method: user.method,
+        phone: profile.phone,
         carMake: profile.carMake,
         carModel: profile.carModel,
+        vehicleNumber: profile.vehicleNumber,
         transactionId,
       });
       update({ booking });

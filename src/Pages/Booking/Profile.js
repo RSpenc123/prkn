@@ -8,8 +8,10 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, update } = useBooking();
   const [name, setName] = useState(user?.name || "");
+  const [phone, setPhone] = useState(user?.method === "phone" ? user.contact : "");
   const [carMake, setCarMake] = useState("");
   const [carModel, setCarModel] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
   const [error, setError] = useState("");
 
   const base = `/r/${addressId}/${spotId}`;
@@ -19,13 +21,20 @@ export default function Profile() {
     return null;
   }
 
+  // If they signed up by phone, we already have a number — no need to ask again.
+  const needsPhone = user.method !== "phone";
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim() || !carMake.trim() || !carModel.trim()) {
       setError("Fill out all fields so the host knows who's parking.");
       return;
     }
-    update({ profile: { name, carMake, carModel } });
+    if (needsPhone && !phone.trim()) {
+      setError("Enter a phone number so the host can reach you.");
+      return;
+    }
+    update({ profile: { name, phone: phone.trim(), carMake, carModel, vehicleNumber: vehicleNumber.trim() } });
     navigate(`${base}/payment`);
   };
 
@@ -42,6 +51,18 @@ export default function Profile() {
             onChange={(e) => setName(e.target.value)}
           />
         </div>
+        {needsPhone && (
+          <div className="booking-field">
+            <label htmlFor="phone">Phone number</label>
+            <input
+              id="phone"
+              className="booking-input"
+              placeholder="(555) 555-5555"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
+        )}
         <div className="card-fields-row">
           <div className="booking-field" style={{ flex: 1 }}>
             <label htmlFor="car-make">Car make</label>
@@ -63,6 +84,16 @@ export default function Profile() {
               onChange={(e) => setCarModel(e.target.value)}
             />
           </div>
+        </div>
+        <div className="booking-field">
+          <label htmlFor="vehicle-number">License plate (optional)</label>
+          <input
+            id="vehicle-number"
+            className="booking-input"
+            placeholder="ABC1234"
+            value={vehicleNumber}
+            onChange={(e) => setVehicleNumber(e.target.value)}
+          />
         </div>
         {error && <p className="error-text">{error}</p>}
         <button className="btn-primary" type="submit">
