@@ -14,8 +14,8 @@ function randomId(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function searchAddress(query) {
-  const q = query.trim().toLowerCase();
+export function searchAddress({ query }) {
+  const q = (query || "").trim().toLowerCase();
   if (!q) return delay(null);
   const match = Object.values(mockAddresses).find((a) =>
     `${a.line1} ${a.city} ${a.state} ${a.zip}`.toLowerCase().includes(q)

@@ -170,13 +170,25 @@ async function geocodeAddress(query) {
   )}&key=${MAPS_API_KEY}`;
   const res = await fetch(url);
   const json = await res.json();
-  if (json.status !== "OK" || !json.results?.length) return null;
+  if (json.status === "ZERO_RESULTS") return null;
+  if (json.status !== "OK" || !json.results?.length) {
+    // REQUEST_DENIED / OVER_QUERY_LIMIT / INVALID_REQUEST etc. — a real,
+    // fixable problem (bad key, API not enabled, domain not whitelisted,
+    // billing not set up), not "no such address." Surface it instead of
+    // silently returning null so it's obvious which one it is.
+    throw new Error(
+      `Google geocoding failed (${json.status}${json.error_message ? `: ${json.error_message}` : ""}).`
+    );
+  }
   const { lat, lng } = json.results[0].geometry.location;
   return { lat, lng };
 }
 
-export async function searchAddress(query) {
-  const geo = await geocodeAddress(query);
+// `coords`, when provided (the user picked a Places autocomplete
+// suggestion), skips geocoding entirely and searches that exact point —
+// more precise than re-geocoding the typed text.
+export async function searchAddress({ query, coords }) {
+  const geo = coords || (await geocodeAddress(query));
   if (!geo) return null;
   const spots = await searchParkingRaw({ latitude: geo.lat, longitude: geo.lng });
   if (!spots.length) return null;
