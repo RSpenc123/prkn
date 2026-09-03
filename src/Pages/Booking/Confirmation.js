@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
+import { IS_MOCK } from "../../api/client";
 
 function formatTime(t) {
   const [h, m] = t.split(":").map(Number);
@@ -28,8 +29,14 @@ export default function Confirmation() {
       <div className="confirmation-check">✓</div>
       <h2 className="confirmation-title">You're all set!</h2>
       <p className="confirmation-sub">
-        Confirmation #{booking.confirmationCode} — a confirmation was texted/emailed to{" "}
-        {user?.contact}. <span className="stub-badge">Demo</span>
+        {IS_MOCK ? (
+          <>
+            Confirmation #{booking.confirmationCode} — a confirmation was texted/emailed to {user?.contact}.{" "}
+            <span className="stub-badge">Demo</span>
+          </>
+        ) : (
+          <>Confirmation #{booking.confirmationCode} — booked for {user?.contact}.</>
+        )}
       </p>
 
       <div className="summary-card">

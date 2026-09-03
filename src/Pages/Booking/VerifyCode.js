@@ -2,9 +2,9 @@ import React, { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { resendCode, verifyCode } from "../../api/client";
+import { IS_MOCK, ensureToken, resendCode, verifyCode } from "../../api/client";
 
-const CODE_LENGTH = 6;
+const CODE_LENGTH = 4;
 
 export default function VerifyCode() {
   const { addressId, spotId } = useParams();
@@ -42,33 +42,47 @@ export default function VerifyCode() {
   const handleVerify = async () => {
     const code = digits.join("");
     if (code.length !== CODE_LENGTH) {
-      setError("Enter the 6-digit code.");
+      setError(`Enter the ${CODE_LENGTH}-digit code.`);
       return;
     }
     setSubmitting(true);
     setError("");
-    const result = await verifyCode({ userId: user.userId, code });
-    setSubmitting(false);
-    if (!result.verified) {
-      setError("That code didn't work. Try again.");
-      return;
+    try {
+      const result = await verifyCode({ userId: user.userId, type: user.method, code });
+      if (!result.verified) {
+        setError("That code didn't work. Try again.");
+        return;
+      }
+      const token = await ensureToken(user);
+      update({ user: { ...user, verified: true, token } });
+      navigate(`${base}/profile`);
+    } catch (err) {
+      setError(err.message || "Verification failed.");
+    } finally {
+      setSubmitting(false);
     }
-    update({ user: { ...user, verified: true } });
-    navigate(`${base}/profile`);
   };
 
   const handleResend = async () => {
-    await resendCode({ userId: user.userId });
-    setResent(true);
-    setTimeout(() => setResent(false), 3000);
+    try {
+      await resendCode({ userId: user.userId, type: user.method });
+      setResent(true);
+      setTimeout(() => setResent(false), 3000);
+    } catch (err) {
+      setError(err.message || "Couldn't resend the code.");
+    }
   };
 
   return (
     <BookingLayout title="Verify It's You" step={4}>
       <p className="help-text">
-        We sent a 6-digit code to your {user.method === "email" ? "email" : "phone"}
-        {" "}
-        ({user.contact}). <span className="stub-badge">Demo</span> — enter any 6 digits to continue.
+        We sent a {CODE_LENGTH}-digit code to your {user.method === "email" ? "email" : "phone"} ({user.contact}).
+        {IS_MOCK && (
+          <>
+            {" "}
+            <span className="stub-badge">Demo</span> — enter any {CODE_LENGTH} digits to continue.
+          </>
+        )}
       </p>
 
       <div className="code-input-row">

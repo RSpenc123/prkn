@@ -2,17 +2,15 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { saveProfile } from "../../api/client";
 
 export default function Profile() {
   const { addressId, spotId } = useParams();
   const navigate = useNavigate();
   const { user, update } = useBooking();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(user?.name || "");
   const [carMake, setCarMake] = useState("");
   const [carModel, setCarModel] = useState("");
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   const base = `/r/${addressId}/${spotId}`;
 
@@ -21,16 +19,13 @@ export default function Profile() {
     return null;
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim() || !carMake.trim() || !carModel.trim()) {
       setError("Fill out all fields so the host knows who's parking.");
       return;
     }
-    setSubmitting(true);
-    const profile = await saveProfile({ userId: user.userId, name, carMake, carModel });
-    update({ profile });
-    setSubmitting(false);
+    update({ profile: { name, carMake, carModel } });
     navigate(`${base}/payment`);
   };
 
@@ -70,8 +65,8 @@ export default function Profile() {
           </div>
         </div>
         {error && <p className="error-text">{error}</p>}
-        <button className="btn-primary" type="submit" disabled={submitting}>
-          {submitting ? "Saving..." : "Continue to Payment"}
+        <button className="btn-primary" type="submit">
+          Continue to Payment
         </button>
       </form>
     </BookingLayout>

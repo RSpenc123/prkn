@@ -71,34 +71,74 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 
 ## Web rental flow (`/r/:addressId`)
 
-A QR code on a listed address can link straight to `/r/:addressId`, which shows
-every spot at that address and walks the guest through: pick a spot → choose a
-date/time → sign up or sign in → verify → enter name/car → pay → confirmation.
+A QR code on a listed address (or the address search box on the landing page)
+links to `/r/:addressId`, which shows every spot at that address and walks the
+guest through: pick a spot → choose a date/time → sign up or sign in → verify
+→ enter name/car → pay → confirmation.
 
-Everything currently runs on **mock data and stubbed services** so the whole
-flow is clickable with no backend. Here's exactly what's mocked and what's
-needed to make it real:
+### Mock mode vs. real backend
 
-- **`src/api/client.js`** — every function (`getSpotsByAddress`, `signUp`,
-  `signIn`, `verifyCode`, `saveProfile`, `createBooking`, etc.) is a stand-in
-  for a real API call. Each one has a comment naming the real endpoint it
-  represents and its expected request/response shape. Swap the body of each
-  function for a `fetch()` against your real API — the rest of the app
-  (`src/Pages/Booking/*`) doesn't need to change as long as the shapes match.
-- **`src/api/mockData.js`** — fake addresses/spots. The important thing to
-  carry over to the real backend: spots need an `addressId` (or similar) field
-  so multiple spots at the same address can be grouped and listed together —
-  today's spot data doesn't appear to have that grouping.
-- **Twilio (SMS verification + confirmation text)** — never call Twilio from
-  the browser. `signUp`/`resendCode` should hit your backend, which sends the
-  code via Twilio; `verifyCode` should hit your backend, which checks the code
-  server-side. Same for the "confirmation text" sent after payment.
-- **Stripe (payment)** — never put a Stripe secret key in frontend code. The
-  Payment page (`src/Pages/Booking/Payment.js`) currently has stubbed Apple
-  Pay/Link/card UI with a "Demo" badge and no real charge. To go live: your
-  backend creates a PaymentIntent, the frontend uses Stripe.js/the Payment
-  Element to collect and confirm payment client-side, and `createBooking`
-  becomes a call that finalizes the booking once payment succeeds (ideally
-  driven by a Stripe webhook on the backend, not just the frontend's say-so).
-- No live map/geocoding is wired up yet (not needed for the QR flow); Google
-  Maps can be added later for a "find a spot near me" page.
+By default (no env vars set) the whole flow runs on **mock data** — nothing
+talks to a real server, so it's clickable with zero setup. Set
+`REACT_APP_API_BASE_URL` (see below) and it switches to the **real backend**
+at [omkar-nanda-ditstek/parking-slot](https://github.com/omkar-nanda-ditstek/parking-slot)
+instead. This is a hard switch, not a per-call fallback:
+
+- `src/api/mockClient.js` — the fake implementations (unchanged, still used when no env var is set)
+- `src/api/realClient.js` — real `fetch()` calls to the actual API, with the exact route contract documented at the top of the file (verified by reading that backend's source, not guessed)
+- `src/api/client.js` — picks one of the above based on `REACT_APP_API_BASE_URL`
+
+`src/Pages/Booking/*` and `src/components/AddressSearch.js` call the same
+function names (`getSpotsByAddress`, `signUp`, `createBooking`, etc.)
+regardless of which mode is active.
+
+### Environment variables needed to go live
+
+Create `.env.local` in the project root (already gitignored — never commit
+real values) with:
+
+```
+REACT_APP_API_BASE_URL=https://your-backend-domain.example.com
+REACT_APP_GOOGLE_MAPS_API_KEY=your-browser-restricted-maps-key
+```
+
+- **`REACT_APP_API_BASE_URL`** — the backend's base URL. **Must be HTTPS** if
+  the website itself is served over HTTPS (a browser blocks a plain-HTTP API
+  call from an HTTPS page — "mixed content"). The backend was last known to
+  run on plain HTTP at a raw IP; that needs a domain + TLS certificate before
+  this can point at it in production.
+- **`REACT_APP_GOOGLE_MAPS_API_KEY`** — a **separate, browser-restricted**
+  Google Maps API key (Geocoding API enabled, HTTP referrer restricted to
+  your domain) used to turn a typed address into coordinates. Do not reuse
+  the backend's own `GOOGLE_MAP_KEY` — that one is a server-side secret and
+  must never end up in frontend code, which anyone can read.
+- Stripe needs no frontend env var — `payment-sheet` returns a
+  `publishableKey` in its response, so the frontend picks it up dynamically.
+
+### CORS
+
+The backend must allow requests from wherever this site is hosted (its
+`main.ts` needs your site's origin in `enableCors()`). This can't be tested
+from a sandboxed environment with no network access to that server — if you
+see a CORS error in the browser console once this is running for real,
+that's the fix, on the backend side.
+
+### Known simplifications (see comments in `realClient.js` for detail)
+
+- **Address grouping is synthesized, not native.** The real Spot schema has
+  no separate "address" record — each spot just carries its own
+  `address_line_1`/`city`/`latitude`/`longitude` fields. "Spots at this
+  address" here means "spots within ~60m of a geocoded point," and the
+  `addressId` in the URL is a lat/lng pair we encode ourselves, not a real
+  database ID.
+- **Pricing markup may not match exactly.** `searchParking` applies a host
+  +admin+renter fee stack via the backend's `calculateAmount()`; the
+  spot-detail page (`getParkingDetail`) does not. Card prices and the detail
+  page's price can legitimately disagree until that's reconciled.
+- **No dedicated UI field yet for phone number (when signing up by email) or
+  license plate.** `createBooking` sends empty/0 for whichever wasn't
+  collected — the backend's schema allows this (those fields are optional).
+- **OTP verification doesn't return a token.** After a successful
+  `verifyOtp`, the app silently re-logs-in with the password the user just
+  typed (kept briefly in memory/sessionStorage, never sent anywhere except
+  that one call) purely to obtain a JWT for the payment/booking steps.

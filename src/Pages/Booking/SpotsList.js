@@ -11,18 +11,27 @@ export default function SpotsList() {
   const navigate = useNavigate();
   const { update } = useBooking();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [address, setAddress] = useState(null);
   const [spots, setSpots] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
-    getSpotsByAddress(addressId).then(({ address, spots }) => {
-      if (cancelled) return;
-      setAddress(address);
-      setSpots(spots);
-      setLoading(false);
-      update({ addressId, address });
-    });
+    setLoading(true);
+    setError("");
+    getSpotsByAddress(addressId)
+      .then(({ address, spots }) => {
+        if (cancelled) return;
+        setAddress(address);
+        setSpots(spots);
+        setLoading(false);
+        update({ addressId, address });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message || "Couldn't load spots for this address.");
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -38,6 +47,8 @@ export default function SpotsList() {
     <BookingLayout title="Available Spots" step={1} onBack={() => navigate("/")}>
       {loading ? (
         <p className="loading-text">Loading spots...</p>
+      ) : error ? (
+        <p className="error-text">{error}</p>
       ) : (
         <>
           <p className="booking-address">

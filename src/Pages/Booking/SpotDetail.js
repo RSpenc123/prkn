@@ -38,16 +38,24 @@ export default function SpotDetail() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
+  const [error, setError] = useState("");
+
   useEffect(() => {
     let cancelled = false;
-    getSpot(spotId).then(({ spot }) => {
-      if (cancelled) return;
-      setSpot(spot);
-      setLoading(false);
-      if (spot && spot.availability.length) {
-        setSelectedDate(spot.availability[0].date);
-      }
-    });
+    getSpot(spotId)
+      .then(({ spot }) => {
+        if (cancelled) return;
+        setSpot(spot);
+        setLoading(false);
+        if (spot && spot.availability.length) {
+          setSelectedDate(spot.availability[0].date);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message || "Couldn't load this spot.");
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -67,6 +75,8 @@ export default function SpotDetail() {
       date: selectedDate,
       startTime,
       endTime,
+      availabilityId: availabilityForDate?.availabilityId,
+      priceType: availabilityForDate?.priceType,
     });
     navigate(`/r/${addressId}/${spotId}/auth`);
   };
@@ -82,7 +92,7 @@ export default function SpotDetail() {
   if (!spot) {
     return (
       <BookingLayout title="Spot Details" step={2} onBack={() => navigate(`/r/${addressId}`)}>
-        <p className="loading-text">Spot not found.</p>
+        <p className="error-text">{error || "Spot not found."}</p>
       </BookingLayout>
     );
   }

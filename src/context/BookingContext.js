@@ -14,7 +14,13 @@ const defaultState = {
   date: null,
   startTime: null,
   endTime: null,
-  user: null, // { userId, contact, method, verified }
+  availabilityId: null, // the specific real-backend availability slot being booked
+  priceType: null, // 'Hourly' | 'Daily', from that availability
+  // { userId, contact, method, name, verified, token, password }. The
+  // real backend's verifyOtp doesn't return a token, so a plaintext
+  // password is held here briefly to silently re-login and obtain one —
+  // it never leaves this session (sessionStorage, cleared on booking).
+  user: null,
   profile: null, // { name, carMake, carModel }
   booking: null, // set once payment completes
 };
