@@ -34,8 +34,9 @@
 //     have one). Both stay optional there since the backend schema allows
 //     empty values for them.
 
+import { loadGoogleMapsScript } from "../utils/googleMaps";
+
 const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/$/, "");
-const MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || "";
 const NEARBY_METERS = 60;
 
 function resolveMediaUrl(path) {
@@ -159,29 +160,32 @@ async function searchParkingRaw({ latitude, longitude }) {
   return Array.isArray(res.data) ? res.data : [];
 }
 
+// Uses the Maps JavaScript SDK's Geocoder, not the raw REST endpoint —
+// a website-restricted API key (the kind safe to ship in frontend code)
+// is rejected by the REST API with "API keys with referer restrictions
+// cannot be used with this API." The JS SDK, loaded via <script> the same
+// way Places Autocomplete is, is exactly what referrer restrictions are
+// designed for and works fine.
 async function geocodeAddress(query) {
-  if (!MAPS_API_KEY) {
-    throw new Error(
-      "Address search isn't configured yet — a Google Maps API key (REACT_APP_GOOGLE_MAPS_API_KEY) is needed to turn a typed address into a location."
-    );
-  }
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-    query
-  )}&key=${MAPS_API_KEY}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  if (json.status === "ZERO_RESULTS") return null;
-  if (json.status !== "OK" || !json.results?.length) {
-    // REQUEST_DENIED / OVER_QUERY_LIMIT / INVALID_REQUEST etc. — a real,
-    // fixable problem (bad key, API not enabled, domain not whitelisted,
-    // billing not set up), not "no such address." Surface it instead of
-    // silently returning null so it's obvious which one it is.
-    throw new Error(
-      `Google geocoding failed (${json.status}${json.error_message ? `: ${json.error_message}` : ""}).`
-    );
-  }
-  const { lat, lng } = json.results[0].geometry.location;
-  return { lat, lng };
+  const google = await loadGoogleMapsScript();
+  const geocoder = new google.maps.Geocoder();
+  return new Promise((resolve, reject) => {
+    geocoder.geocode({ address: query }, (results, status) => {
+      if (status === "ZERO_RESULTS") {
+        resolve(null);
+        return;
+      }
+      if (status !== "OK" || !results?.length) {
+        // REQUEST_DENIED / OVER_QUERY_LIMIT / INVALID_REQUEST etc. — a
+        // real, fixable problem, not "no such address." Surface it
+        // instead of silently returning null.
+        reject(new Error(`Google geocoding failed (${status}).`));
+        return;
+      }
+      const loc = results[0].geometry.location;
+      resolve({ lat: loc.lat(), lng: loc.lng() });
+    });
+  });
 }
 
 // `coords`, when provided (the user picked a Places autocomplete

@@ -108,10 +108,18 @@ REACT_APP_GOOGLE_MAPS_API_KEY=your-browser-restricted-maps-key
   run on plain HTTP at a raw IP; that needs a domain + TLS certificate before
   this can point at it in production.
 - **`REACT_APP_GOOGLE_MAPS_API_KEY`** — a **separate, browser-restricted**
-  Google Maps API key (Geocoding API enabled, HTTP referrer restricted to
-  your domain) used to turn a typed address into coordinates. Do not reuse
-  the backend's own `GOOGLE_MAP_KEY` — that one is a server-side secret and
-  must never end up in frontend code, which anyone can read.
+  Google Maps API key, HTTP referrer restricted to your domain (add
+  `localhost/*` too for local testing). Do not reuse the backend's own
+  `GOOGLE_MAP_KEY` — that one is a server-side secret and must never end up
+  in frontend code, which anyone can read.
+  Enable, and check under the key's **API restrictions**, all three of:
+  **Maps JavaScript API**, **Places API**, **Geocoding API**. All three are
+  used through the JS SDK (loaded via `<script>`) rather than any raw REST
+  call — a referrer-restricted key is *rejected outright* by Google's raw
+  Geocoding REST endpoint ("API keys with referer restrictions cannot be
+  used with this API"), so everything here goes through
+  `google.maps.places.Autocomplete` / `google.maps.Geocoder` instead, which
+  referrer restrictions are actually designed for.
 - Stripe needs no frontend env var — `payment-sheet` returns a
   `publishableKey` in its response, so the frontend picks it up dynamically.
 
