@@ -160,31 +160,40 @@ async function searchParkingRaw({ latitude, longitude }) {
   return Array.isArray(res.data) ? res.data : [];
 }
 
-// Uses the Maps JavaScript SDK's Geocoder, not the raw REST endpoint —
-// a website-restricted API key (the kind safe to ship in frontend code)
-// is rejected by the REST API with "API keys with referer restrictions
-// cannot be used with this API." The JS SDK, loaded via <script> the same
-// way Places Autocomplete is, is exactly what referrer restrictions are
-// designed for and works fine.
+// Resolves free-typed text to a location — used when someone types and
+// submits without picking an autocomplete suggestion. Uses Places'
+// findPlaceFromQuery rather than the Geocoder, since the Geocoder only
+// understands addresses; findPlaceFromQuery also matches business/place
+// names ("Joe's Pizza"), same as the autocomplete dropdown does.
+//
+// Runs through the Maps JavaScript SDK, not the raw REST endpoint — a
+// website-restricted API key (the kind safe to ship in frontend code) is
+// rejected by Google's raw Geocoding REST API with "API keys with referer
+// restrictions cannot be used with this API." The JS SDK, loaded via
+// <script> the same way Places Autocomplete is, is exactly what referrer
+// restrictions are designed for and works fine.
 async function geocodeAddress(query) {
   const google = await loadGoogleMapsScript();
-  const geocoder = new google.maps.Geocoder();
+  const service = new google.maps.places.PlacesService(document.createElement("div"));
   return new Promise((resolve, reject) => {
-    geocoder.geocode({ address: query }, (results, status) => {
-      if (status === "ZERO_RESULTS") {
-        resolve(null);
-        return;
+    service.findPlaceFromQuery(
+      { query, fields: ["geometry", "name", "formatted_address"] },
+      (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          resolve(null);
+          return;
+        }
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !results?.length) {
+          // REQUEST_DENIED / OVER_QUERY_LIMIT / INVALID_REQUEST etc. — a
+          // real, fixable problem, not "no such place." Surface it
+          // instead of silently returning null.
+          reject(new Error(`Google Places search failed (${status}).`));
+          return;
+        }
+        const loc = results[0].geometry.location;
+        resolve({ lat: loc.lat(), lng: loc.lng() });
       }
-      if (status !== "OK" || !results?.length) {
-        // REQUEST_DENIED / OVER_QUERY_LIMIT / INVALID_REQUEST etc. — a
-        // real, fixable problem, not "no such address." Surface it
-        // instead of silently returning null.
-        reject(new Error(`Google geocoding failed (${status}).`));
-        return;
-      }
-      const loc = results[0].geometry.location;
-      resolve({ lat: loc.lat(), lng: loc.lng() });
-    });
+    );
   });
 }
 

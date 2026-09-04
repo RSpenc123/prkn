@@ -54,7 +54,7 @@ export function Mobile() {
   
                 <h1 className="pier"> PRK'n</h1>
                 <div className="pier-button">
-                  <AddressSearch className="address-search-mobile" placeholder="Enter an address" />
+                  <AddressSearch className="address-search-mobile" placeholder="Enter an address or place name" />
                 </div>
 
 

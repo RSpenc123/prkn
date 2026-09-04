@@ -12,7 +12,7 @@ import "./AddressSearch.css";
 // Autocompletes as you type via Google Places (matching the mobile app),
 // with a plain-text + geocode fallback if the Places script can't load
 // (missing/misconfigured key) so the search box still works either way.
-export default function AddressSearch({ className = "", placeholder = "Enter an address" }) {
+export default function AddressSearch({ className = "", placeholder = "Enter an address or place name" }) {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [searching, setSearching] = useState(false);
@@ -26,16 +26,21 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
     loadGoogleMapsScript()
       .then((google) => {
         if (cancelled || !inputRef.current) return;
-        autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-          types: ["address"],
-        });
+        // No `types` restriction — that's what limits suggestions to just
+        // street addresses. Leaving it unset matches addresses, businesses
+        // (restaurants, venues, etc.), and points of interest alike, same
+        // as searching "Joe's Pizza" and getting its location.
+        autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current);
         autocompleteRef.current.addListener("place_changed", () => {
           const place = autocompleteRef.current.getPlace();
           if (!place?.geometry) return;
           const coords = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
           selectedCoordsRef.current = coords;
-          setQuery(place.formatted_address || inputRef.current.value);
-          runSearch({ query: place.formatted_address, coords });
+          // A business's name ("Joe's Pizza") is a more useful label than
+          // its bare street address once selected.
+          const label = place.name || place.formatted_address || inputRef.current.value;
+          setQuery(label);
+          runSearch({ query: label, coords });
         });
       })
       .catch(() => {
