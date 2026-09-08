@@ -183,6 +183,7 @@ export default function Payment() {
       const booking = await createBooking({
         token: user.token,
         spotId: spot.id,
+        spotSize: spot.size,
         availabilityId,
         priceType,
         date,

@@ -164,6 +164,9 @@ function mapSpot(raw) {
     pricePerHour: derivePricePerHour(raw, availability),
     status: raw.status === "active" && raw.availability_status !== "Fully Booked" ? "available" : "booked",
     availability,
+    // The host's own size-category id for this spot. createBooking needs
+    // *a* size id to look up — see the size note on createBooking() below.
+    size: raw.size || null,
   };
 }
 
@@ -356,6 +359,7 @@ function combineDateTimeToEpoch(dateStr, timeStr) {
 export async function createBooking({
   token,
   spotId,
+  spotSize,
   availabilityId,
   priceType,
   date,
@@ -386,6 +390,14 @@ export async function createBooking({
       phone_no: Number(phoneNo) || 0,
       address: "",
       car_model: [carMake, carModel].filter(Boolean).join(" "),
+      // The website doesn't collect the renter's own vehicle size (the
+      // booking form has no such field), so this echoes the spot's own
+      // size back. The backend crashes ("SPOT addition failed") if a spot
+      // has a size set but the booking's size doesn't resolve to a real
+      // Size document — see booking-size-crash-fix.md for the real,
+      // backend-side fix (a missing/unmatched size should never crash the
+      // whole booking).
+      size: spotSize || "",
       vehicle_number: vehicleNumber || "",
       availability_ids: [availabilityId],
       slots: [
