@@ -421,6 +421,39 @@ export async function createBooking({
   if (!res.status) throw new Error(messageText(res.message));
   const data = res.data || {};
   const bookingId = data._id || "";
+
+  // createBooking alone leaves the booking in whatever pending status it's
+  // created with — the app's own flow makes this second call once payment
+  // succeeds, to flip it to "booked" (see updateBookingStatus's own doc
+  // comment: "Update Booking Status like booked or payment Failed"). The
+  // website skipped this entirely, which is why a fully-paid website
+  // booking still shows as processing in the app. "booked" here is
+  // inferred from the shared status enum's lowercase convention seen
+  // elsewhere (e.g. a Spot's "active" status) — not confirmed against the
+  // enum's source, since that file was never shared. If the app still
+  // shows "processing" after this ships, the exact string needs
+  // double-checking with the developer.
+  if (bookingId) {
+    try {
+      await request("/api/updateBookingStatus", {
+        method: "POST",
+        body: {
+          booking_id: bookingId,
+          transaction_id: transactionId,
+          status: "booked",
+          spot_id: spotId,
+          amount,
+        },
+        token,
+      });
+    } catch (err) {
+      // The booking itself already succeeded and the customer's already
+      // been charged — don't fail the whole checkout over this follow-up
+      // call. Surface it for debugging instead of losing it silently.
+      console.error("updateBookingStatus failed:", err);
+    }
+  }
+
   return {
     bookingId,
     confirmationCode: bookingId ? bookingId.slice(-6).toUpperCase() : "CONFIRMED",
