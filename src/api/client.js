@@ -17,6 +17,9 @@ export const IS_MOCK = client === mockClient;
 export const searchAddress = client.searchAddress;
 export const getSpotsByAddress = client.getSpotsByAddress;
 export const getSpot = client.getSpot;
+// Only meaningful against the real backend — mock spots are never
+// "Partially Available", so this is never actually called in mock mode.
+export const getBookedRanges = client === realClient ? realClient.getBookedRanges : async () => [];
 export const signUp = client.signUp;
 export const signIn = client.signIn;
 export const verifyCode = client.verifyCode;

@@ -2,7 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { getSpot } from "../../api/client";
+import { getSpot, getBookedRanges } from "../../api/client";
+
+// Statuses meaning "nothing left to book in this window at all" — these
+// windows are hidden from the date picker entirely so an already-fully-
+// rented spot can't be selected and paid for again.
+const UNBOOKABLE_STATUSES = ["Fully Booked", "Currently Unavailable", "Expired"];
 
 function formatDateLabel(dateStr) {
   const d = new Date(`${dateStr}T00:00:00`);
@@ -57,6 +62,7 @@ export default function SpotDetail() {
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [bookedRanges, setBookedRanges] = useState([]);
   const timeSectionRef = useRef(null);
 
   useEffect(() => {
@@ -64,11 +70,14 @@ export default function SpotDetail() {
     getSpot(spotId)
       .then(({ spot }) => {
         if (cancelled) return;
-        // Drop any date whose whole window has already ended — nothing
-        // left in it to book.
+        // Drop any date whose whole window has already ended, or that's
+        // already fully booked/unavailable/expired — nothing left in it
+        // to book either way.
         const now = new Date();
         const upcoming = spot
-          ? spot.availability.filter((a) => windowEndDate(a.date, a.slots[0].end) > now)
+          ? spot.availability.filter(
+              (a) => windowEndDate(a.date, a.slots[0].end) > now && !UNBOOKABLE_STATUSES.includes(a.availabilityStatus)
+            )
           : [];
         setSpot(spot ? { ...spot, availability: upcoming } : spot);
         setLoading(false);
@@ -106,6 +115,16 @@ export default function SpotDetail() {
   const handleSelectDate = (availabilityEntry) => {
     applyDefaultTimes(availabilityEntry);
     setValidationError("");
+    // A partially-available window has some already-booked time inside
+    // it — fetch exactly which, so Continue can reject an overlapping
+    // selection instead of letting it double-book.
+    if (availabilityEntry.availabilityStatus === "Partially Available") {
+      getBookedRanges(availabilityEntry.availabilityId)
+        .then(setBookedRanges)
+        .catch(() => setBookedRanges([]));
+    } else {
+      setBookedRanges([]);
+    }
     // Give the new fields a moment to render before scrolling to them.
     requestAnimationFrame(() => {
       timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -149,6 +168,14 @@ export default function SpotDetail() {
     }
     if (endDateTime <= startDateTime) {
       setValidationError("End time needs to be after the start time.");
+      return;
+    }
+
+    const startMinPicked = timeToMinutes(startTime);
+    const endMinPicked = timeToMinutes(endTime);
+    const overlapsBooking = bookedRanges.some((r) => startMinPicked < r.endMin && endMinPicked > r.startMin);
+    if (overlapsBooking) {
+      setValidationError("That time overlaps a part of this spot that's already booked — try a different time.");
       return;
     }
 

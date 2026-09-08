@@ -153,6 +153,12 @@ function mapSpot(raw) {
       availabilityId: a._id || a.reference_id,
       priceRaw: a.price,
       priceType: a.price_type || "Hourly",
+      // "Fully Available" | "Partially Available" | "Fully Booked" |
+      // "Currently Unavailable" | "Expired" — maintained server-side as
+      // bookings come and go. SpotDetail excludes the fully-booked/
+      // unavailable/expired ones so an already-fully-rented window can't
+      // be selected and paid for again.
+      availabilityStatus: a.availability_status || null,
     };
   });
   return {
@@ -255,6 +261,45 @@ export async function getSpot(spotId) {
   const res = await request(`/api/getParkingDetail/${spotId}`);
   if (!res.status) return { spot: null, address: null };
   return { spot: mapSpot(res.data), address: mapAddressFromSpot(res.data) };
+}
+
+// For a "Partially Available" window, returns the specific already-booked
+// time ranges (in minutes-since-midnight) within it, so the picker can
+// block them instead of letting someone double-book an already-rented
+// time. Public endpoint, no auth needed. Best-effort: the exact shape of
+// what a booking record looks like here hasn't been directly confirmed
+// against a live response, so this parses defensively and — if a booking
+// entry doesn't look like what's expected — simply skips it rather than
+// risk showing wrong blocked ranges.
+export async function getBookedRanges(availabilityId) {
+  if (!availabilityId) return [];
+  let res;
+  try {
+    res = await request("/api/getBookingsByAvailabilitytId", {
+      method: "POST",
+      body: { availability_id: availabilityId },
+    });
+  } catch {
+    return [];
+  }
+  const bookings = Array.isArray(res.data) ? res.data : [];
+  const ranges = [];
+  for (const booking of bookings) {
+    if (booking.status && /cancel/i.test(booking.status)) continue;
+    const entries = Array.isArray(booking.slots) && booking.slots.length ? booking.slots : [booking];
+    for (const entry of entries) {
+      const start = Number(entry.start_date_time);
+      const end = Number(entry.end_date_time);
+      if (!start || !end) continue;
+      const startD = new Date(start);
+      const endD = new Date(end);
+      ranges.push({
+        startMin: startD.getHours() * 60 + startD.getMinutes(),
+        endMin: endD.getHours() * 60 + endD.getMinutes(),
+      });
+    }
+  }
+  return ranges;
 }
 
 export async function signUp({ contact, method, password, name }) {
