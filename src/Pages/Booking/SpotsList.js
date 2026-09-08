@@ -2,7 +2,37 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { getSpotsByAddress } from "../../api/client";
+import { getSpotsByAddress, getBookedRanges } from "../../api/client";
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// The backend's own per-spot "Fully Booked" style status doesn't reliably
+// reflect real bookings (see SpotDetail.js's note on the same issue), so
+// this checks actual booked ranges directly instead: booked right now ->
+// red "Currently Unavailable", booked at some other time -> yellow
+// "Partially Available", nothing booked at all -> green "Available".
+async function computeBookingStatus(spot) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const today = todayStr();
+  let anyBooking = false;
+  let currentlyUnavailable = false;
+  await Promise.all(
+    (spot.availability || []).map(async (a) => {
+      const ranges = await getBookedRanges(a.availabilityId).catch(() => []);
+      if (ranges.length) anyBooking = true;
+      if (a.date === today && ranges.some((r) => nowMin >= r.startMin && nowMin < r.endMin)) {
+        currentlyUnavailable = true;
+      }
+    })
+  );
+  if (currentlyUnavailable) return "unavailable";
+  if (anyBooking) return "partial";
+  return "available";
+}
 
 // Hosts often title/describe spots like "Spot #1", "Spot #2 - near the
 // entrance", etc. Sort by that leading number so the list reads in the
@@ -39,10 +69,15 @@ export default function SpotsList() {
     setLoading(true);
     setError("");
     getSpotsByAddress(addressId)
-      .then(({ address, spots }) => {
+      .then(async ({ address, spots }) => {
+        if (cancelled) return;
+        const sorted = sortByLeadingNumber(spots);
+        const withBookingStatus = await Promise.all(
+          sorted.map(async (spot) => ({ ...spot, bookingStatus: await computeBookingStatus(spot) }))
+        );
         if (cancelled) return;
         setAddress(address);
-        setSpots(sortByLeadingNumber(spots));
+        setSpots(withBookingStatus);
         setLoading(false);
         update({ addressId, address });
       })
@@ -87,8 +122,12 @@ export default function SpotsList() {
                 <img className="spot-card-photo" src={spot.photos[0]} alt={spot.title} />
                 <div className="spot-card-info">
                   <p className="spot-card-title">{spot.title}</p>
-                  <span className={`spot-status ${spot.status}`}>
-                    {spot.status === "available" ? "Available" : "Booked"}
+                  <span className={`spot-status ${spot.bookingStatus || "available"}`}>
+                    {spot.bookingStatus === "unavailable"
+                      ? "Currently Unavailable"
+                      : spot.bookingStatus === "partial"
+                      ? "Partially Available"
+                      : "Available"}
                   </span>
                   <p className="spot-card-price">
                     {spot.pricePerHour > 0 ? `$${spot.pricePerHour}/hr` : "See pricing"}

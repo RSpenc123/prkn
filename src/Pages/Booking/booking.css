@@ -140,8 +140,13 @@
   color: #1a8a4c;
 }
 
-.spot-status.booked {
+.spot-status.booked,
+.spot-status.unavailable {
   color: #b3261e;
+}
+
+.spot-status.partial {
+  color: #b8860b;
 }
 
 .spot-card-price {
