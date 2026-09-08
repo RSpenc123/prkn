@@ -27,7 +27,16 @@ function StripePaymentForm({ amount, onSuccess, onError }) {
     e.preventDefault();
     if (!stripe || !elements) return;
     setSubmitting(true);
-    const { error, paymentIntent } = await stripe.confirmPayment({ elements, redirect: "if_required" });
+    // return_url is where the bank sends the customer back to if the card
+    // needs extra verification (3D Secure) — without it, that step can
+    // fail outright instead of just not being needed. redirect:
+    // "if_required" still keeps the customer on this page for cards that
+    // don't need it, which is the common case.
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+      confirmParams: { return_url: window.location.href },
+    });
     setSubmitting(false);
     if (error) {
       onError(error.message || "Payment failed.");
