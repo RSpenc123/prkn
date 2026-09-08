@@ -18,6 +18,11 @@
 // below for the case where signup doesn't hand back a token (an existing,
 // not-yet-verified account "failing" signup with that account's data instead).
 //
+// Phone signup/login's phone_no must be sent as E.164 ("+1XXXXXXXXXX") —
+// the backend matches it as a literal string with no normalization, and
+// that's the format it's actually stored in (confirmed via the admin
+// panel). See toE164() below.
+//
 // KNOWN SIMPLIFICATIONS (documented, not silently guessed):
 //   - Spots don't have a "title" field in the real schema; `description` is
 //     used instead, falling back to the street address.
@@ -43,6 +48,15 @@ function resolveMediaUrl(path) {
   if (!path) return path;
   if (/^https?:\/\//i.test(path)) return path;
   return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+// The backend matches phone_no as a literal string with no normalization
+// (`userModel.findOne({ phone_no })`), and stores it in E.164 form (e.g.
+// "+19493102642", confirmed against the admin panel's user list) — so
+// signup/login must send exactly that shape or an existing account won't
+// be found. US-only for now, matching the 10-digit cap on the phone input.
+function toE164(digits) {
+  return `+1${digits}`;
 }
 
 function messageText(message) {
@@ -247,7 +261,7 @@ export async function signUp({ contact, method, password, name }) {
       type: method,
       name,
       email: method === "email" ? contact : "",
-      phone_no: method === "phone" ? contact : "",
+      phone_no: method === "phone" ? toE164(contact) : "",
       password,
       role: "renter",
     },
@@ -275,7 +289,7 @@ export async function signIn({ contact, method, password }) {
     body: {
       type: method,
       email: method === "email" ? contact : undefined,
-      phone_no: method === "phone" ? contact : undefined,
+      phone_no: method === "phone" ? toE164(contact) : undefined,
       password,
       device_token: "",
       latitude: 0,
