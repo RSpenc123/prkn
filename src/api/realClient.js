@@ -116,6 +116,19 @@ function mapAddressFromSpot(raw) {
   };
 }
 
+// The top-level Spot.price field is only reliably set for spots created
+// through the newer add-spot flow — older spots only have real pricing on
+// each individual availability slot. Prefer the cheapest available slot's
+// price (a normal "starting at $X/hr" display) and only fall back to the
+// spot-level price if no slot pricing is present at all.
+function derivePricePerHour(raw, availability) {
+  const slotPrices = availability
+    .map((a) => Number(a.priceRaw))
+    .filter((p) => !isNaN(p) && p > 0);
+  if (slotPrices.length) return Math.min(...slotPrices);
+  return Number(raw.price) || 0;
+}
+
 function mapSpot(raw) {
   const availability = (raw.availabilities || []).map((a) => {
     const start = new Date(Number(a.start_date_time));
@@ -134,7 +147,7 @@ function mapSpot(raw) {
     title: raw.description ? raw.description.slice(0, 60) : raw.address_line_1 || "Parking spot",
     description: raw.description || "",
     photos: (raw.images || []).map(resolveMediaUrl),
-    pricePerHour: Number(raw.price) || 0,
+    pricePerHour: derivePricePerHour(raw, availability),
     status: raw.status === "active" && raw.availability_status !== "Fully Booked" ? "available" : "booked",
     availability,
   };

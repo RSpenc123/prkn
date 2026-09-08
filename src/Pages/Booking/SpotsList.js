@@ -4,6 +4,25 @@ import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
 import { getSpotsByAddress } from "../../api/client";
 
+// Hosts often title/describe spots like "Spot #1", "Spot #2 - near the
+// entrance", etc. Sort by that leading number so the list reads in the
+// order hosts intended rather than whatever order the database returns.
+// Spots with no leading number sort after the numbered ones, in whatever
+// order they arrived in.
+function sortByLeadingNumber(spots) {
+  const withIndex = spots.map((spot, index) => {
+    const match = /(\d+)/.exec(spot.title || spot.description || "");
+    return { spot, index, num: match ? parseInt(match[1], 10) : null };
+  });
+  withIndex.sort((a, b) => {
+    if (a.num !== null && b.num !== null) return a.num - b.num;
+    if (a.num !== null) return -1;
+    if (b.num !== null) return 1;
+    return a.index - b.index;
+  });
+  return withIndex.map((item) => item.spot);
+}
+
 // Entry point for the QR code: /r/:addressId
 // Shows every spot listed at this address so the guest can pick one.
 export default function SpotsList() {
@@ -23,7 +42,7 @@ export default function SpotsList() {
       .then(({ address, spots }) => {
         if (cancelled) return;
         setAddress(address);
-        setSpots(spots);
+        setSpots(sortByLeadingNumber(spots));
         setLoading(false);
         update({ addressId, address });
       })
@@ -71,7 +90,9 @@ export default function SpotsList() {
                   <span className={`spot-status ${spot.status}`}>
                     {spot.status === "available" ? "Available" : "Booked"}
                   </span>
-                  <p className="spot-card-price">${spot.pricePerHour}/hr</p>
+                  <p className="spot-card-price">
+                    {spot.pricePerHour > 0 ? `$${spot.pricePerHour}/hr` : "See pricing"}
+                  </p>
                 </div>
               </button>
             ))}

@@ -3,6 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
 
+// Formats raw digits as (555) 234-9944 for display. The underlying state
+// stays plain digits — that's what actually gets sent to the backend.
+function formatPhoneDisplay(digits) {
+  const d = digits.slice(0, 10);
+  if (d.length === 0) return "";
+  if (d.length < 4) return `(${d}`;
+  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 export default function Profile() {
   const { addressId, spotId } = useParams();
   const navigate = useNavigate();
@@ -57,9 +67,11 @@ export default function Profile() {
             <input
               id="phone"
               className="booking-input"
+              type="text"
+              inputMode="numeric"
               placeholder="(555) 555-5555"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              value={formatPhoneDisplay(phone)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
             />
           </div>
         )}

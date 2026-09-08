@@ -133,7 +133,12 @@ export default function Payment() {
   const amount = spot ? parseFloat((hours * spot.pricePerHour).toFixed(2)) : 0;
 
   useEffect(() => {
-    if (IS_MOCK || !profile || !amount) return;
+    if (IS_MOCK || !profile) return;
+    if (!amount || amount <= 0) {
+      setError("This spot doesn't have a valid price set yet — contact the host before booking.");
+      setLoadingIntent(false);
+      return;
+    }
     let cancelled = false;
     createPaymentIntent({ amount, token: user.token })
       .then(({ clientSecret, publishableKey }) => {

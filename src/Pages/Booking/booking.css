@@ -230,6 +230,7 @@
 }
 
 .time-field select,
+.time-field input[type="time"],
 .booking-input {
   width: 100%;
   padding: 10px 12px;

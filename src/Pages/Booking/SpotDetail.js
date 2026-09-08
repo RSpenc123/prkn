@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
@@ -9,23 +9,41 @@ function formatDateLabel(dateStr) {
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
-function timeOptions(start, end) {
-  const options = [];
-  let [h, m] = start.split(":").map(Number);
-  const [endH, endM] = end.split(":").map(Number);
-  while (h < endH || (h === endH && m <= endM)) {
-    const label = new Date(0, 0, 0, h, m).toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    options.push({ value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, label });
-    m += 30;
-    if (m >= 60) {
-      m = 0;
-      h += 1;
-    }
-  }
-  return options;
+function todayStr() {
+  return toDateStr(new Date());
+}
+
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function toHHMM(d) {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function timeToMinutes(t) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+// Round up to the nearest 5 minutes — nicer default than an odd time like 2:47.
+function roundUpTo5(mins) {
+  return Math.ceil(mins / 5) * 5;
+}
+
+// A date's slot is bookable at all only if its window hasn't fully ended yet.
+function windowEndDate(dateStr, endTime) {
+  return new Date(`${dateStr}T${endTime}:00`);
 }
 
 export default function SpotDetail() {
@@ -37,18 +55,25 @@ export default function SpotDetail() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-
   const [error, setError] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const timeSectionRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     getSpot(spotId)
       .then(({ spot }) => {
         if (cancelled) return;
-        setSpot(spot);
+        // Drop any date whose whole window has already ended — nothing
+        // left in it to book.
+        const now = new Date();
+        const upcoming = spot
+          ? spot.availability.filter((a) => windowEndDate(a.date, a.slots[0].end) > now)
+          : [];
+        setSpot(spot ? { ...spot, availability: upcoming } : spot);
         setLoading(false);
-        if (spot && spot.availability.length) {
-          setSelectedDate(spot.availability[0].date);
+        if (upcoming.length) {
+          applyDefaultTimes(upcoming[0]);
         }
       })
       .catch((err) => {
@@ -59,16 +84,74 @@ export default function SpotDetail() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spotId]);
+
+  // Defaults the picker to "now" (or the slot's own start, whichever is
+  // later) rounded to a clean 5-minute mark, with the end time an hour
+  // after that — matches the mobile app's behavior.
+  const applyDefaultTimes = (availabilityEntry) => {
+    const slot = availabilityEntry.slots[0];
+    const slotStartMin = timeToMinutes(slot.start);
+    const slotEndMin = timeToMinutes(slot.end);
+    const isToday = availabilityEntry.date === todayStr();
+    const nowMin = isToday ? roundUpTo5(new Date().getHours() * 60 + new Date().getMinutes()) : slotStartMin;
+    const start = clamp(Math.max(nowMin, slotStartMin), slotStartMin, slotEndMin);
+    const end = clamp(start + 60, slotStartMin, slotEndMin);
+    setSelectedDate(availabilityEntry.date);
+    setStartTime(minutesToTime(start));
+    setEndTime(start === end ? "" : minutesToTime(end));
+  };
+
+  const handleSelectDate = (availabilityEntry) => {
+    applyDefaultTimes(availabilityEntry);
+    setValidationError("");
+    // Give the new fields a moment to render before scrolling to them.
+    requestAnimationFrame(() => {
+      timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const availabilityForDate = spot?.availability.find((a) => a.date === selectedDate);
   const slot = availabilityForDate?.slots[0];
-  const startOptions = slot ? timeOptions(slot.start, slot.end) : [];
-  const endOptions = startTime && slot ? timeOptions(startTime, slot.end).slice(1) : [];
 
-  const canContinue = selectedDate && startTime && endTime;
+  const isToday = selectedDate === todayStr();
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const startMin = slot ? (isToday ? Math.max(timeToMinutes(slot.start), nowMinutes) : timeToMinutes(slot.start)) : 0;
+  const endMin = slot ? timeToMinutes(slot.end) : 0;
+
+  const canContinue = selectedDate && startTime && endTime && !validationError;
+
+  const handleStartChange = (value) => {
+    setStartTime(value);
+    setValidationError("");
+    // Keep end time meaningful (at least the same as start) when start moves past it.
+    if (endTime && timeToMinutes(value) >= timeToMinutes(endTime)) {
+      setEndTime(minutesToTime(clamp(timeToMinutes(value) + 60, startMin, endMin)));
+    }
+  };
 
   const handleContinue = () => {
+    setValidationError("");
+    if (!selectedDate || !startTime || !endTime) return;
+
+    const startDateTime = new Date(`${selectedDate}T${startTime}:00`);
+    const endDateTime = new Date(`${selectedDate}T${endTime}:00`);
+
+    // A couple of minutes of grace — the default start time is rounded to
+    // the current 5-minute mark with no buffer, so without this, simply
+    // taking a few seconds to click Continue would reject a user's own
+    // untouched default.
+    const GRACE_MS = 2 * 60 * 1000;
+    if (startDateTime.getTime() < Date.now() - GRACE_MS) {
+      setValidationError("That start time has already passed — pick a later time.");
+      return;
+    }
+    if (endDateTime <= startDateTime) {
+      setValidationError("End time needs to be after the start time.");
+      return;
+    }
+
     update({
       addressId,
       spot,
@@ -105,7 +188,7 @@ export default function SpotDetail() {
         ))}
       </div>
       <h2 className="spot-detail-title">{spot.title}</h2>
-      <p className="spot-detail-price">${spot.pricePerHour}/hr</p>
+      <p className="spot-detail-price">{spot.pricePerHour > 0 ? `$${spot.pricePerHour}/hr` : "See pricing below"}</p>
       <p className="spot-detail-description">{spot.description}</p>
 
       <h3 className="booking-section-title">Choose a date</h3>
@@ -115,54 +198,47 @@ export default function SpotDetail() {
             key={a.date}
             type="button"
             className={`date-pill ${selectedDate === a.date ? "selected" : ""}`}
-            onClick={() => {
-              setSelectedDate(a.date);
-              setStartTime("");
-              setEndTime("");
-            }}
+            onClick={() => handleSelectDate(a)}
           >
             {formatDateLabel(a.date)}
           </button>
         ))}
+        {spot.availability.length === 0 && <p className="help-text">No upcoming availability for this spot.</p>}
       </div>
 
-      <h3 className="booking-section-title">Choose a time</h3>
+      <h3 className="booking-section-title" ref={timeSectionRef}>
+        Choose a time
+      </h3>
       <div className="time-row">
         <div className="time-field">
           <label htmlFor="start-time">Start</label>
-          <select
+          <input
             id="start-time"
+            type="time"
             value={startTime}
-            onChange={(e) => {
-              setStartTime(e.target.value);
-              setEndTime("");
-            }}
-          >
-            <option value="">Select</option>
-            {startOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            min={minutesToTime(startMin)}
+            max={minutesToTime(endMin)}
+            onChange={(e) => handleStartChange(e.target.value)}
+          />
         </div>
         <div className="time-field">
           <label htmlFor="end-time">End</label>
-          <select
+          <input
             id="end-time"
+            type="time"
             value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
+            min={startTime || minutesToTime(startMin)}
+            max={minutesToTime(endMin)}
+            onChange={(e) => {
+              setEndTime(e.target.value);
+              setValidationError("");
+            }}
             disabled={!startTime}
-          >
-            <option value="">Select</option>
-            {endOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       </div>
+
+      {validationError && <p className="error-text">{validationError}</p>}
 
       <button className="btn-primary" disabled={!canContinue} onClick={handleContinue}>
         Continue
