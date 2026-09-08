@@ -42,7 +42,12 @@ function StripePaymentForm({ amount, onSuccess, onError }) {
 
   return (
     <form className="booking-form" onSubmit={handleSubmit}>
-      <PaymentElement />
+      <PaymentElement
+        options={{
+          paymentMethodOrder: ["card", "apple_pay", "link"],
+          wallets: { applePay: "auto", googlePay: "never" },
+        }}
+      />
       <button className="btn-primary" type="submit" disabled={!stripe || submitting}>
         {submitting ? "Processing..." : `Pay $${amount.toFixed(2)}`}
       </button>
@@ -77,14 +82,14 @@ function StubPaymentForm({ amount, onPay }) {
         Payment method <span className="stub-badge">Demo</span>
       </h3>
       <div className="payment-method-row">
+        <button type="button" className={`payment-method-btn ${method === "card" ? "selected" : ""}`} onClick={() => setMethod("card")}>
+          Card
+        </button>
         <button type="button" className={`payment-method-btn apple ${method === "applepay" ? "selected" : ""}`} onClick={() => setMethod("applepay")}>
            Pay
         </button>
         <button type="button" className={`payment-method-btn link ${method === "link" ? "selected" : ""}`} onClick={() => setMethod("link")}>
           Link
-        </button>
-        <button type="button" className={`payment-method-btn ${method === "card" ? "selected" : ""}`} onClick={() => setMethod("card")}>
-          Card
         </button>
       </div>
 
