@@ -4,10 +4,25 @@ import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
 import { getSpot, getBookedRanges } from "../../api/client";
 
-// Statuses meaning "nothing left to book in this window at all" — these
-// windows are hidden from the date picker entirely so an already-fully-
-// rented spot can't be selected and paid for again.
+// Statuses meaning "nothing left to book in this window at all", if the
+// backend ever includes this field on an availability entry — it doesn't
+// today (getParkingDetail's availability projection has no status field),
+// so this is a no-op in practice right now and real bookability is
+// determined below by directly checking booked ranges instead.
 const UNBOOKABLE_STATUSES = ["Fully Booked", "Currently Unavailable", "Expired"];
+
+// True if booked ranges, merged, leave no gap across [slotStartMin, slotEndMin].
+function isFullyCovered(slotStartMin, slotEndMin, ranges) {
+  if (!ranges.length) return false;
+  const sorted = [...ranges].sort((a, b) => a.startMin - b.startMin);
+  let coveredUntil = slotStartMin;
+  for (const r of sorted) {
+    if (r.startMin > coveredUntil) return false;
+    coveredUntil = Math.max(coveredUntil, r.endMin);
+    if (coveredUntil >= slotEndMin) return true;
+  }
+  return coveredUntil >= slotEndMin;
+}
 
 function formatDateLabel(dateStr) {
   const d = new Date(`${dateStr}T00:00:00`);
@@ -63,26 +78,51 @@ export default function SpotDetail() {
   const [error, setError] = useState("");
   const [validationError, setValidationError] = useState("");
   const [bookedRanges, setBookedRanges] = useState([]);
+  const [bookedRangesByAvailability, setBookedRangesByAvailability] = useState({});
   const timeSectionRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     getSpot(spotId)
-      .then(({ spot }) => {
+      .then(async ({ spot }) => {
         if (cancelled) return;
-        // Drop any date whose whole window has already ended, or that's
-        // already fully booked/unavailable/expired — nothing left in it
-        // to book either way.
+        // Drop any date whose whole window has already ended, or whose
+        // status already marks it unbookable (if the backend ever sends
+        // that — see UNBOOKABLE_STATUSES' note).
         const now = new Date();
-        const upcoming = spot
+        const candidates = spot
           ? spot.availability.filter(
               (a) => windowEndDate(a.date, a.slots[0].end) > now && !UNBOOKABLE_STATUSES.includes(a.availabilityStatus)
             )
           : [];
+
+        // Directly check real bookings against each remaining window —
+        // this is the actual source of truth for what's taken, not any
+        // status field. Also drop any window a booking has fully
+        // consumed, so an already-fully-rented spot doesn't even show up
+        // as choosable.
+        const rangesByAvailability = {};
+        await Promise.all(
+          candidates.map(async (a) => {
+            try {
+              rangesByAvailability[a.availabilityId] = await getBookedRanges(a.availabilityId);
+            } catch {
+              rangesByAvailability[a.availabilityId] = [];
+            }
+          })
+        );
+        const upcoming = candidates.filter((a) => {
+          const ranges = rangesByAvailability[a.availabilityId] || [];
+          return !isFullyCovered(timeToMinutes(a.slots[0].start), timeToMinutes(a.slots[0].end), ranges);
+        });
+
+        if (cancelled) return;
+        setBookedRangesByAvailability(rangesByAvailability);
         setSpot(spot ? { ...spot, availability: upcoming } : spot);
         setLoading(false);
         if (upcoming.length) {
           applyDefaultTimes(upcoming[0]);
+          setBookedRanges(rangesByAvailability[upcoming[0].availabilityId] || []);
         }
       })
       .catch((err) => {
@@ -115,16 +155,7 @@ export default function SpotDetail() {
   const handleSelectDate = (availabilityEntry) => {
     applyDefaultTimes(availabilityEntry);
     setValidationError("");
-    // A partially-available window has some already-booked time inside
-    // it — fetch exactly which, so Continue can reject an overlapping
-    // selection instead of letting it double-book.
-    if (availabilityEntry.availabilityStatus === "Partially Available") {
-      getBookedRanges(availabilityEntry.availabilityId)
-        .then(setBookedRanges)
-        .catch(() => setBookedRanges([]));
-    } else {
-      setBookedRanges([]);
-    }
+    setBookedRanges(bookedRangesByAvailability[availabilityEntry.availabilityId] || []);
     // Give the new fields a moment to render before scrolling to them.
     requestAnimationFrame(() => {
       timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
