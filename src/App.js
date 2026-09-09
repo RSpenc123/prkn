@@ -5,6 +5,7 @@ import { Landing } from './Pages/Landing';
 import Carousel from './Pages/Carousel';
 import Mobile from './Pages/Mobile';
 import { BookingProvider } from './context/BookingContext';
+import { AuthProvider } from './context/AuthContext';
 import SpotsList from './Pages/Booking/SpotsList';
 import SpotDetail from './Pages/Booking/SpotDetail';
 import Auth from './Pages/Booking/Auth';
@@ -12,6 +13,9 @@ import VerifyCode from './Pages/Booking/VerifyCode';
 import Profile from './Pages/Booking/Profile';
 import Payment from './Pages/Booking/Payment';
 import Confirmation from './Pages/Booking/Confirmation';
+import SignIn from './Pages/Account/SignIn';
+import MyAccount from './Pages/Account/MyAccount';
+import ManageBookings from './Pages/Account/ManageBookings';
 import { Outlet } from 'react-router-dom';
 
 function BookingLayoutRoute() {
@@ -24,10 +28,14 @@ function BookingLayoutRoute() {
 
 function App() {
   return (
+    <AuthProvider>
     <Routes>
    <Route path="/" element={<Landing/>} />
    <Route path="/test" element={<Carousel/>} />
    <Route path="/mobile" element={<Mobile/>} />
+   <Route path="/signin" element={<SignIn/>} />
+   <Route path="/account" element={<MyAccount/>} />
+   <Route path="/account/bookings" element={<ManageBookings/>} />
 
    <Route path="/r/:addressId" element={<BookingLayoutRoute/>}>
      <Route index element={<SpotsList/>} />
@@ -41,7 +49,7 @@ function App() {
 
    <Route />
     </Routes>
-
+    </AuthProvider>
   );
 }
 

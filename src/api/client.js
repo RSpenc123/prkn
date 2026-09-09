@@ -26,6 +26,12 @@ export const verifyCode = client.verifyCode;
 export const resendCode = client.resendCode;
 export const createPaymentIntent = client.createPaymentIntent;
 export const createBooking = client.createBooking;
+export const getProfile = client.getProfile;
+export const updateAccountProfile = client.updateAccountProfile;
+export const changeAccountPassword = client.changeAccountPassword;
+export const getMyBookings = client.getMyBookings;
+export const logoutUser = client.logoutUser;
+export const deleteAccount = client.deleteAccount;
 
 // Only meaningful against the real backend — a no-op passthrough in mock
 // mode since mock signIn/signUp already return a usable token.

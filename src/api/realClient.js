@@ -12,6 +12,13 @@
 //   POST /api/resendOtp            public   { user_id, type }
 //   POST /api/payment-sheet        JWT      { amount } -> Stripe PaymentIntent (client_secret + publishableKey)
 //   POST /api/createBooking        JWT      { name, email, phone_no, car_model, vehicle_number, availability_ids, slots[], spot_id, amount, transaction_id, grandTotal }
+//   POST /api/getBookingsByAvailabilitytId  public  { availability_id }
+//   GET  /api/getProfile           JWT      -> current user's record
+//   POST /api/updateProfileAndAddress JWT   { name?, email?, phone_no?, ... } (all optional strings)
+//   POST /api/changePassword       JWT      { old_password, password }
+//   POST /api/getBookingsForRenter JWT      { booking_status? } -> this user's bookings
+//   POST /api/logout               JWT      clears device_token server-side
+//   DELETE /api/deleteUser/:id     public (!) — no auth guard on the backend; see deleteAccount() below
 //
 // Every JWT-guarded route needs `Authorization: Bearer <token>` — the token
 // comes back on signupNew (new accounts only) and loginNew. See ensureToken()
@@ -508,4 +515,98 @@ export async function createBooking({
     endTime,
     status: "confirmed",
   };
+}
+
+// Strips a stored "+1XXXXXXXXXX" back down to plain digits for display —
+// the inverse of toE164() above.
+function fromE164(phone) {
+  if (!phone) return "";
+  return phone.replace(/^\+?1/, "").replace(/\D/g, "").slice(0, 10);
+}
+
+export async function getProfile({ token }) {
+  const res = await request("/api/getProfile", { token });
+  if (!res.status) throw new Error(messageText(res.message));
+  const data = res.data || {};
+  return {
+    name: data.name || "",
+    email: data.email || "",
+    phone: fromE164(data.phone_no),
+  };
+}
+
+export async function updateAccountProfile({ token, name, email, phone }) {
+  const res = await request("/api/updateProfileAndAddress", {
+    method: "POST",
+    body: {
+      name: name || "",
+      email: email || "",
+      phone_no: phone ? toE164(phone) : "",
+    },
+    token,
+  });
+  if (!res.status) throw new Error(messageText(res.message));
+  return { ok: true };
+}
+
+export async function changeAccountPassword({ token, oldPassword, newPassword }) {
+  const res = await request("/api/changePassword", {
+    method: "POST",
+    body: { old_password: oldPassword, password: newPassword },
+    token,
+  });
+  if (!res.status) throw new Error(messageText(res.message));
+  return { ok: true };
+}
+
+// The raw shape of a booking record from getBookingsForRenter hasn't been
+// directly confirmed (no source for booking.service.ts), so this reads
+// defensively across the field-name variants seen elsewhere in this file
+// rather than assuming one — a booking that doesn't match any of them is
+// still returned with whatever fields it does have, not dropped.
+function mapMyBooking(raw) {
+  const slot = Array.isArray(raw.slots) && raw.slots.length ? raw.slots[0] : raw;
+  const start = Number(slot.start_date_time) || null;
+  const end = Number(slot.end_date_time) || null;
+  return {
+    id: raw._id,
+    spotId: raw.spot_id?._id || raw.spot_id || null,
+    spotTitle: raw.spotAddress || raw.spot_id?.description || raw.address || "Parking spot",
+    startTime: start,
+    endTime: end,
+    amount: Number(raw.amount ?? slot.amount ?? 0),
+    status: raw.status || "",
+    createdAt: raw.meta?.created_at || null,
+  };
+}
+
+export async function getMyBookings({ token }) {
+  const res = await request("/api/getBookingsForRenter", {
+    method: "POST",
+    body: {},
+    token,
+  });
+  if (!res.status) throw new Error(messageText(res.message));
+  const list = Array.isArray(res.data) ? res.data : [];
+  return list.map(mapMyBooking);
+}
+
+export async function logoutUser({ token }) {
+  try {
+    await request("/api/logout", { method: "POST", body: {}, token });
+  } catch {
+    // Client-side logout (clearing the persisted session) still happens
+    // regardless — this is best-effort cleanup on the server side only.
+  }
+}
+
+// The backend's DELETE /api/deleteUser/:id has no auth guard at all (no
+// @UseGuards on that route) — anyone who knows a user's id can delete
+// their account, not just that user. Flagged to the developer; this is
+// called with the signed-in user's own id either way, since it's the only
+// account-deletion endpoint that exists.
+export async function deleteAccount({ userId, token }) {
+  const res = await request(`/api/deleteUser/${userId}`, { method: "DELETE", token });
+  if (!res.status) throw new Error(messageText(res.message));
+  return { ok: true };
 }

@@ -21,7 +21,7 @@ export default function Confirmation() {
 
   const handleDone = () => {
     reset();
-    navigate(`/r/${addressId}`);
+    navigate("/");
   };
 
   return (

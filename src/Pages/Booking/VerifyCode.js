@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
+import { useAuth } from "../../context/AuthContext";
 import { IS_MOCK, ensureToken, resendCode, verifyCode } from "../../api/client";
 
 const CODE_LENGTH = 4;
@@ -10,6 +11,7 @@ export default function VerifyCode() {
   const { addressId, spotId } = useParams();
   const navigate = useNavigate();
   const { user, update } = useBooking();
+  const { login } = useAuth();
   const [digits, setDigits] = useState(Array(CODE_LENGTH).fill(""));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +57,7 @@ export default function VerifyCode() {
       }
       const token = await ensureToken(user);
       update({ user: { ...user, verified: true, token } });
+      login({ userId: user.userId, token, contact: user.contact, method: user.method, name: user.name });
       navigate(`${base}/profile`);
     } catch (err) {
       setError(err.message || "Verification failed.");

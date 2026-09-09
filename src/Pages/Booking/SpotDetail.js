@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
+import { useAuth } from "../../context/AuthContext";
 import { getSpot, getBookedRanges } from "../../api/client";
 
 // Statuses meaning "nothing left to book in this window at all", if the
@@ -70,6 +71,7 @@ export default function SpotDetail() {
   const { addressId, spotId } = useParams();
   const navigate = useNavigate();
   const { update } = useBooking();
+  const { user: persistedUser, isSignedIn } = useAuth();
   const [loading, setLoading] = useState(true);
   const [spot, setSpot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -210,7 +212,7 @@ export default function SpotDetail() {
       return;
     }
 
-    update({
+    const bookingPatch = {
       addressId,
       spot,
       date: selectedDate,
@@ -218,7 +220,21 @@ export default function SpotDetail() {
       endTime,
       availabilityId: availabilityForDate?.availabilityId,
       priceType: availabilityForDate?.priceType,
-    });
+    };
+
+    // Already signed in (persists across visits — see AuthContext) — no
+    // need to ask again. Seed the checkout's own user record from it and
+    // skip straight past sign-in/verification.
+    if (isSignedIn) {
+      update({
+        ...bookingPatch,
+        user: { ...persistedUser, verified: true },
+      });
+      navigate(`/r/${addressId}/${spotId}/profile`);
+      return;
+    }
+
+    update(bookingPatch);
     navigate(`/r/${addressId}/${spotId}/auth`);
   };
 

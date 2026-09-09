@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
+import { useAuth } from "../../context/AuthContext";
 import { signIn, signUp } from "../../api/client";
 
 // Formats raw digits as (555) 234-9944 for display. The underlying state
@@ -18,6 +19,7 @@ export default function Auth() {
   const { addressId, spotId } = useParams();
   const navigate = useNavigate();
   const { spot, update } = useBooking();
+  const { isSignedIn, login } = useAuth();
   const [mode, setMode] = useState("signup"); // 'signup' | 'signin'
   const [method, setMethod] = useState("phone"); // 'phone' | 'email'
   const [name, setName] = useState("");
@@ -31,6 +33,13 @@ export default function Auth() {
 
   if (!spot) {
     navigate(`/r/${addressId}`);
+    return null;
+  }
+
+  // Already signed in (e.g. reached this URL directly, such as via the
+  // back button) — nothing to ask, go straight to the next step.
+  if (isSignedIn) {
+    navigate(`${base}/profile`);
     return null;
   }
 
@@ -76,6 +85,9 @@ export default function Auth() {
     try {
       const user = await signIn({ contact, method, password });
       update({ user: { ...user, contact, method, password } });
+      if (user.verified) {
+        login({ userId: user.userId, token: user.token, contact, method, name: user.name });
+      }
       navigate(user.verified ? `${base}/profile` : `${base}/verify`);
     } catch (err) {
       setError(err.message || "Sign in failed.");

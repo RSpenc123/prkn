@@ -77,3 +77,41 @@ export function createBooking({ spotId, date, startTime, endTime }) {
     status: "confirmed",
   });
 }
+
+const mockAccounts = {};
+
+export function getProfile({ token }) {
+  return delay(mockAccounts[token] || { name: "Demo User", email: "demo@example.com", phone: "5555550123" });
+}
+
+export function updateAccountProfile({ token, name, email, phone }) {
+  mockAccounts[token] = { name, email, phone };
+  return delay({ ok: true });
+}
+
+export function changeAccountPassword() {
+  return delay({ ok: true });
+}
+
+export function getMyBookings() {
+  return delay(
+    mockSpots.slice(0, 2).map((spot, i) => ({
+      id: randomId("booking"),
+      spotId: spot.id,
+      spotTitle: spot.title,
+      startTime: Date.now() - (i + 1) * 86400000,
+      endTime: Date.now() - (i + 1) * 86400000 + 3600000,
+      amount: spot.pricePerHour,
+      status: "Booked",
+      createdAt: Date.now() - (i + 1) * 86400000,
+    }))
+  );
+}
+
+export function logoutUser() {
+  return delay({ ok: true });
+}
+
+export function deleteAccount() {
+  return delay({ ok: true });
+}
