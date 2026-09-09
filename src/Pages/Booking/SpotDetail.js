@@ -325,24 +325,6 @@ export default function SpotDetail() {
       </div>
 
       <h2 className="spot-detail-title">{spot.title}</h2>
-      {spot.sizeTitle && (
-        <p className="spot-detail-size">
-          <span className="spot-detail-size-icon">⤢</span> {spot.sizeTitle}
-        </p>
-      )}
-
-      {spot.host && (
-        <>
-          <h3 className="booking-section-title">Host Details</h3>
-          <div className="host-card">
-            <div className="host-avatar">👤</div>
-            <div className="host-detail-info">
-              <p className="host-name">{spot.host.name || "Host"}</p>
-              <p className="host-rating">{spot.host.rating ? `${spot.host.rating.toFixed(1)} ★` : "No Reviews"}</p>
-            </div>
-          </div>
-        </>
-      )}
 
       <h3 className="booking-section-title">Description</h3>
       <p className="spot-detail-description">{spot.description || "No description provided."}</p>

@@ -53,8 +53,8 @@ function StripePaymentForm({ amount, onSuccess, onError }) {
     <form className="booking-form" onSubmit={handleSubmit}>
       <PaymentElement
         options={{
-          paymentMethodOrder: ["card", "apple_pay", "link"],
-          wallets: { applePay: "auto", googlePay: "never" },
+          paymentMethodOrder: ["card", "apple_pay", "google_pay", "link"],
+          wallets: { applePay: "auto", googlePay: "auto" },
         }}
       />
       <button className="btn-primary" type="submit" disabled={!stripe || submitting}>

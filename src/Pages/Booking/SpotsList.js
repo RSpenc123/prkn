@@ -120,18 +120,27 @@ export default function SpotsList() {
                 disabled={spot.status !== "available"}
               >
                 <img className="spot-card-photo" src={spot.photos[0]} alt={spot.title} />
-                <div className="spot-card-info">
+                <div className="spot-card-body">
                   <p className="spot-card-title">{spot.title}</p>
-                  <span className={`spot-status ${spot.bookingStatus || "available"}`}>
-                    {spot.bookingStatus === "unavailable"
-                      ? "Currently Unavailable"
-                      : spot.bookingStatus === "partial"
-                      ? "Partially Available"
-                      : "Available"}
-                  </span>
-                  <p className="spot-card-price">
-                    {spot.pricePerHour > 0 ? `$${spot.pricePerHour}/hr` : "See pricing"}
-                  </p>
+                  <div className="spot-card-meta-row">
+                    <span className="spot-card-meta">
+                      <span className="spot-card-meta-icon">📍</span>
+                      {address?.city || "—"}
+                    </span>
+                    <span className="spot-card-meta">
+                      <span className="spot-card-meta-icon">$</span>
+                      {spot.pricePerHour > 0 ? `${spot.pricePerHour}/hr` : "See pricing"}
+                    </span>
+                  </div>
+                  <div className="spot-card-status-row">
+                    <span className={`spot-status ${spot.bookingStatus || "available"}`}>
+                      {spot.bookingStatus === "unavailable"
+                        ? "Currently Unavailable"
+                        : spot.bookingStatus === "partial"
+                        ? "Partially Available"
+                        : "Available"}
+                    </span>
+                  </div>
                 </div>
               </button>
             ))}

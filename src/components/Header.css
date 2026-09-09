@@ -2,9 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
-  background: white;
-  border-bottom: 1px solid #e2e5ea;
+  padding: 16px 20px;
+  background: transparent;
   position: relative;
   z-index: 20;
 }

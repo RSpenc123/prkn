@@ -9,6 +9,12 @@ export default function BookingLayout({ title, step, onBack, children }) {
   const navigate = useNavigate();
   const progressPct = Math.min(100, Math.round((step / STEP_COUNT) * 100));
 
+  const handleLogoClick = () => {
+    if (window.confirm("Return to the home page? You'll lose your progress here.")) {
+      navigate("/");
+    }
+  };
+
   return (
     <div className="booking-page">
       <div className="booking-header">
@@ -19,7 +25,7 @@ export default function BookingLayout({ title, step, onBack, children }) {
         >
           ←
         </button>
-        <img className="booking-logo" src={logo} alt="PRK'n" />
+        <img className="booking-logo" src={logo} alt="PRK'n" onClick={handleLogoClick} role="button" />
         <h1 className="booking-header-title">{title}</h1>
       </div>
       <div className="booking-progress-track">
