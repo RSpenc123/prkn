@@ -113,13 +113,15 @@
 }
 
 .spot-card-photo {
+  /* No fixed height/aspect-ratio and no object-fit crop or letterbox —
+     the box just takes whatever height matches this photo's own natural
+     proportions at full card width, so every photo both fills its box
+     completely and shows 100% of its content, whatever shape it is.
+     Different spots' cards will end up different heights, which is
+     expected — that's a consequence of hosts' photos not sharing one
+     aspect ratio, not a bug. */
   width: 100%;
-  aspect-ratio: 3 / 2;
-  /* contain (not cover) so a host's photo never gets cropped — a spot
-     number or important detail near the edge could otherwise be cut off
-     depending on the photo's own orientation/aspect ratio. */
-  object-fit: contain;
-  background: #eef1f4;
+  height: auto;
   display: block;
 }
 
