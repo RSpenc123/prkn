@@ -6,6 +6,7 @@ import driveway from "../images/driveway-parking-spot.jpg";
 import hostParking from "../images/host-parking-pic.jpg";
 import pier from "../images/pierphoto.jpg";
 import beach from "../images/beachhomepage.jpg";
+import testSpotPhoto from "../images/test-spot-photo.jpg";
 
 export const mockAddresses = {
   "addr_demo_1": {
@@ -31,7 +32,7 @@ export const mockSpots = [
     title: "Driveway spot, 1 block from the pier",
     description:
       "Private driveway with easy in-and-out access. Fits sedans and small SUVs. No overnight towing risk, well-lit street.",
-    photos: [driveway, hostParking],
+    photos: [testSpotPhoto, driveway, hostParking],
     pricePerHour: 6,
     status: "available",
     sizeTitle: "Mid Size",
