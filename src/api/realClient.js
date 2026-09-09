@@ -180,6 +180,20 @@ function mapSpot(raw) {
     // The host's own size-category id for this spot. createBooking needs
     // *a* size id to look up — see the size note on createBooking() below.
     size: raw.size || null,
+    // getParkingDetail includes both of these directly (size_details from
+    // the sizeService lookup, host_details from the spot's owner) — not
+    // used before now.
+    sizeTitle: raw.size_details?.title || null,
+    host: raw.host_details
+      ? {
+          name: raw.host_details.name || "",
+          // reviewAverageSpot()'s return shape isn't confirmed from source,
+          // so this only trusts it when it's plainly a positive number —
+          // anything else (0, null, an object) falls back to "No Reviews"
+          // rather than risk showing something wrong.
+          rating: typeof raw.host_details.ratings === "number" && raw.host_details.ratings > 0 ? raw.host_details.ratings : null,
+        }
+      : null,
   };
 }
 

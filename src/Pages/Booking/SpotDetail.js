@@ -12,6 +12,8 @@ import { getSpot, getBookedRanges } from "../../api/client";
 // determined below by directly checking booked ranges instead.
 const UNBOOKABLE_STATUSES = ["Fully Booked", "Currently Unavailable", "Expired"];
 
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 // True if booked ranges, merged, leave no gap across [slotStartMin, slotEndMin].
 function isFullyCovered(slotStartMin, slotEndMin, ranges) {
   if (!ranges.length) return false;
@@ -53,6 +55,11 @@ function minutesToTime(mins) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function formatTimeLabel(t) {
+  const [h, m] = t.split(":").map(Number);
+  return new Date(0, 0, 0, h, m).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -65,6 +72,28 @@ function roundUpTo5(mins) {
 // A date's slot is bookable at all only if its window hasn't fully ended yet.
 function windowEndDate(dateStr, endTime) {
   return new Date(`${dateStr}T${endTime}:00`);
+}
+
+// Builds a Sun-Sat grid of cells for the given month, padded with the
+// trailing/leading days of the neighboring months (grayed out, not
+// clickable) so every row has 7 cells — the same shape as a normal
+// calendar app.
+function buildMonthGrid(year, month) {
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const cells = [];
+  for (let i = firstWeekday - 1; i >= 0; i--) {
+    cells.push({ day: daysInPrevMonth - i, inMonth: false, dateStr: null });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, inMonth: true, dateStr: `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}` });
+  }
+  let trailing = 1;
+  while (cells.length % 7 !== 0) {
+    cells.push({ day: trailing++, inMonth: false, dateStr: null });
+  }
+  return cells;
 }
 
 export default function SpotDetail() {
@@ -81,6 +110,11 @@ export default function SpotDetail() {
   const [validationError, setValidationError] = useState("");
   const [bookedRanges, setBookedRanges] = useState([]);
   const [bookedRangesByAvailability, setBookedRangesByAvailability] = useState({});
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
   const timeSectionRef = useRef(null);
 
   useEffect(() => {
@@ -125,6 +159,8 @@ export default function SpotDetail() {
         if (upcoming.length) {
           applyDefaultTimes(upcoming[0]);
           setBookedRanges(rangesByAvailability[upcoming[0].availabilityId] || []);
+          const d = new Date(`${upcoming[0].date}T00:00:00`);
+          setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
         }
       })
       .catch((err) => {
@@ -254,68 +290,160 @@ export default function SpotDetail() {
     );
   }
 
+  const availabilityByDate = new Map(spot.availability.map((a) => [a.date, a]));
+  const monthCells = buildMonthGrid(viewMonth.year, viewMonth.month);
+  const monthLabel = new Date(viewMonth.year, viewMonth.month, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+  const today = todayStr();
+
+  const changeMonth = (delta) => {
+    setViewMonth(({ year, month }) => {
+      const d = new Date(year, month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  };
+
   return (
     <BookingLayout title="Spot Details" step={2} onBack={() => navigate(`/r/${addressId}`)}>
-      <div className="booking-photos">
-        {spot.photos.map((photo, i) => (
-          <img key={i} src={photo} alt={`${spot.title} ${i + 1}`} />
-        ))}
+      <div className="spot-photo-carousel">
+        <img className="spot-photo-main" src={spot.photos[photoIndex]} alt={spot.title} />
+        {spot.photos.length > 1 && (
+          <div className="spot-photo-dots">
+            {spot.photos.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Photo ${i + 1}`}
+                className={`spot-photo-dot ${i === photoIndex ? "active" : ""}`}
+                onClick={() => setPhotoIndex(i)}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
       <h2 className="spot-detail-title">{spot.title}</h2>
-      <p className="spot-detail-price">{spot.pricePerHour > 0 ? `$${spot.pricePerHour}/hr` : "See pricing below"}</p>
-      <p className="spot-detail-description">{spot.description}</p>
+      {spot.sizeTitle && (
+        <p className="spot-detail-size">
+          <span className="spot-detail-size-icon">⤢</span> {spot.sizeTitle}
+        </p>
+      )}
+
+      {spot.host && (
+        <>
+          <h3 className="booking-section-title">Host Details</h3>
+          <div className="host-card">
+            <div className="host-avatar">👤</div>
+            <div className="host-detail-info">
+              <p className="host-name">{spot.host.name || "Host"}</p>
+              <p className="host-rating">{spot.host.rating ? `${spot.host.rating.toFixed(1)} ★` : "No Reviews"}</p>
+            </div>
+          </div>
+        </>
+      )}
+
+      <h3 className="booking-section-title">Description</h3>
+      <p className="spot-detail-description">{spot.description || "No description provided."}</p>
 
       <h3 className="booking-section-title">Choose a date</h3>
-      <div className="date-pill-row">
-        {spot.availability.map((a) => (
-          <button
-            key={a.date}
-            type="button"
-            className={`date-pill ${selectedDate === a.date ? "selected" : ""}`}
-            onClick={() => handleSelectDate(a)}
-          >
-            {formatDateLabel(a.date)}
+      <div className="calendar-card">
+        <div className="calendar-header">
+          <button type="button" className="calendar-nav" onClick={() => changeMonth(-1)} aria-label="Previous month">
+            ‹
           </button>
-        ))}
-        {spot.availability.length === 0 && <p className="help-text">No upcoming availability for this spot.</p>}
+          <span className="calendar-month-label">{monthLabel}</span>
+          <button type="button" className="calendar-nav" onClick={() => changeMonth(1)} aria-label="Next month">
+            ›
+          </button>
+        </div>
+        <div className="calendar-weekdays">
+          {WEEKDAY_LABELS.map((w) => (
+            <span key={w}>{w}</span>
+          ))}
+        </div>
+        <div className="calendar-grid">
+          {monthCells.map((cell, i) => {
+            if (!cell.inMonth) {
+              return <span key={i} className="calendar-day calendar-day-empty" />;
+            }
+            const availabilityEntry = availabilityByDate.get(cell.dateStr);
+            const isPast = cell.dateStr < today;
+            const isSelected = cell.dateStr === selectedDate;
+            const isBookable = !!availabilityEntry && !isPast;
+            return (
+              <button
+                key={i}
+                type="button"
+                disabled={!isBookable}
+                className={`calendar-day ${isSelected ? "selected" : isBookable ? "available" : "disabled"}`}
+                onClick={() => isBookable && handleSelectDate(availabilityEntry)}
+              >
+                {cell.day}
+              </button>
+            );
+          })}
+        </div>
+        {spot.availability.length === 0 && <p className="help-text" style={{ marginTop: 10 }}>No upcoming availability for this spot.</p>}
       </div>
 
-      <h3 className="booking-section-title" ref={timeSectionRef}>
-        Choose a time
-      </h3>
-      <div className="time-row">
-        <div className="time-field">
-          <label htmlFor="start-time">Start</label>
-          <input
-            id="start-time"
-            type="time"
-            value={startTime}
-            min={minutesToTime(startMin)}
-            max={minutesToTime(endMin)}
-            onChange={(e) => handleStartChange(e.target.value)}
-          />
+      {availabilityForDate && slot && (
+        <div className="spot-summary-box">
+          <div className="spot-summary-row">
+            <span>Selected Date</span>
+            <span>{formatDateLabel(selectedDate)}</span>
+          </div>
+          <div className="spot-summary-row">
+            <span>Available Timings</span>
+            <span>
+              {formatTimeLabel(slot.start)} - {formatTimeLabel(slot.end)}
+            </span>
+          </div>
+          <div className="spot-summary-row">
+            <span>Price</span>
+            <span>{spot.pricePerHour > 0 ? `$${spot.pricePerHour} / Hour` : "See pricing"}</span>
+          </div>
         </div>
-        <div className="time-field">
-          <label htmlFor="end-time">End</label>
-          <input
-            id="end-time"
-            type="time"
-            value={endTime}
-            min={startTime || minutesToTime(startMin)}
-            max={minutesToTime(endMin)}
-            onChange={(e) => {
-              setEndTime(e.target.value);
-              setValidationError("");
-            }}
-            disabled={!startTime}
-          />
+      )}
+
+      <div className="checkinout-row" ref={timeSectionRef}>
+        <div className="checkinout-field">
+          <label htmlFor="start-time">Check In</label>
+          <div className="checkinout-box">
+            <input
+              id="start-time"
+              type="time"
+              value={startTime}
+              min={minutesToTime(startMin)}
+              max={minutesToTime(endMin)}
+              onChange={(e) => handleStartChange(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="checkinout-field">
+          <label htmlFor="end-time">Check Out</label>
+          <div className="checkinout-box">
+            <input
+              id="end-time"
+              type="time"
+              value={endTime}
+              min={startTime || minutesToTime(startMin)}
+              max={minutesToTime(endMin)}
+              onChange={(e) => {
+                setEndTime(e.target.value);
+                setValidationError("");
+              }}
+              disabled={!startTime}
+            />
+          </div>
         </div>
       </div>
 
       {validationError && <p className="error-text">{validationError}</p>}
 
       <button className="btn-primary" disabled={!canContinue} onClick={handleContinue}>
-        Continue
+        Save
       </button>
     </BookingLayout>
   );

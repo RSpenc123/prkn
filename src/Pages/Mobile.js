@@ -17,13 +17,6 @@ import apple from "../images/apple.png"
 import AddressSearch from "../components/AddressSearch"
 
 
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet"></link>
-
-
-
-
-
-
 
 
 export function Mobile() {

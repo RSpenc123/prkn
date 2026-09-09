@@ -121,7 +121,7 @@
 };
 
 .beach-text{
-    font-family: "roboto-mono", monospace;
+    font-family: "Poppins", sans-serif;
     
 }
 .beach{
@@ -145,7 +145,7 @@
 }
 
 .address-search-title{
-    font-family: "roboto-mono", monospace;
+    font-family: "Poppins", sans-serif;
     font-weight: 700;
     font-size: 1.8vw;
     margin-bottom: 16px;
@@ -191,7 +191,7 @@
     font-weight: 700;
   font-style: normal;
   margin-bottom: 0px;
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
 }
 .prkn-text2{
     font-size: 2.5vw;
@@ -199,7 +199,7 @@
     font-weight: 700;
   font-style: normal;
   /* margin-bottom: 50px; */
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
 }
 
 .examples{
@@ -218,7 +218,7 @@
     justify-content: center;
     align-items: left;
     flex-direction: column;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
 
    
     
@@ -237,7 +237,7 @@
   border-radius: 20px;
   margin-left: 7%;
   margin-bottom: 2%;
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
   font-weight: 400;
   
 }
@@ -261,7 +261,7 @@
   /* margin-left: 7%; */
   margin-right: 40%;
   margin-bottom: 2%;
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
   font-weight: 400;
   
 }
@@ -283,7 +283,7 @@
   border-radius: 5px;
   margin-left: 7%;
   margin-bottom: 2%;
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
   font-weight: 400;
   
 }
@@ -305,7 +305,7 @@
 }
 
 .host-info{
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -329,12 +329,12 @@ padding-bottom: 5%
 .earn{
     font-size: 75px;
     margin: 0px;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
 }
 .earn2{
     font-size: 50px;
     margin: 0px;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
 }
 .host-box{
     width: 50%;
@@ -346,7 +346,7 @@ padding-bottom: 5%
     margin-right: 0px;
     padding-right: 0px;
     margin-top: 00px;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
 }
 
 .video{
@@ -441,7 +441,7 @@ padding-bottom: 5%
     background-color: white;
     margin-top: -5px;
     padding-top: 0px;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
 }
 
 .follow-text{
@@ -548,7 +548,7 @@ padding-bottom: 5%
 
 .landing-host-dropdown-text{
     font-size: 2.5vh;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
     width: 60%;
     margin-right: 20%;
 }
@@ -557,7 +557,7 @@ padding-bottom: 5%
 
 .landing-guest-dropdown-text{
     font-size: 2.5vh;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
     width: 50%;
     margin-left: 20%;
 }
@@ -574,7 +574,7 @@ padding-bottom: 5%
 
 .dropdown-title-text{
     font-size: 5vh;
-    font-family: "roboto-mono", monospace; 
+    font-family: "Poppins", sans-serif; 
     font-weight: 500;
 }
 

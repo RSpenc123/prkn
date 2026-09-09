@@ -1,7 +1,7 @@
 .booking-page {
   min-height: 100vh;
   background-color: #f7f8fa;
-  font-family: "roboto-mono", monospace;
+  font-family: "Poppins", sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -556,4 +556,253 @@
   color: #6b7280;
   padding: 40px 20px;
   text-align: center;
+}
+
+/* Spot detail: photo carousel */
+
+.spot-photo-carousel {
+  margin-bottom: 16px;
+}
+
+.spot-photo-main {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 18px;
+  display: block;
+}
+
+.spot-photo-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.spot-photo-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: none;
+  background: #d7dbe0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.spot-photo-dot.active {
+  width: 20px;
+  background: #1E88E5;
+}
+
+/* Spot detail: size + host */
+
+.spot-detail-size {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spot-detail-size-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #eef1f4;
+  font-size: 12px;
+}
+
+.host-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: white;
+  border: 1.5px solid #e2e5ea;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.host-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eef1f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.host-name {
+  font-weight: 700;
+  color: #2d2d2d;
+  margin: 0 0 2px 0;
+}
+
+.host-rating {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Spot detail: calendar */
+
+.calendar-card {
+  background: white;
+  border: 2px solid #1E88E5;
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.calendar-nav {
+  background: none;
+  border: none;
+  color: #1E88E5;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
+.calendar-month-label {
+  color: #1E88E5;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 6px;
+}
+
+.calendar-weekdays span {
+  text-align: center;
+  color: #1E88E5;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: #2d2d2d;
+  cursor: default;
+  border-radius: 8px;
+}
+
+.calendar-day-empty {
+  cursor: default;
+}
+
+.calendar-day.disabled {
+  color: #cbd2d9;
+}
+
+.calendar-day.available {
+  background: #E3F2FD;
+  color: #2d2d2d;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.calendar-day.available:hover {
+  background: #BBDEFB;
+}
+
+.calendar-day.selected {
+  background: #1E88E5;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Spot detail: selected-date summary + check in/out */
+
+.spot-summary-box {
+  background: white;
+  border: 2px solid #1E88E5;
+  border-radius: 20px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.spot-summary-row {
+  display: flex;
+  justify-content: space-between;
+  color: #1E88E5;
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.spot-summary-row span:first-child {
+  font-weight: 500;
+}
+
+.spot-summary-row span:last-child {
+  font-weight: 700;
+}
+
+.checkinout-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.checkinout-field {
+  flex: 1;
+}
+
+.checkinout-field label {
+  display: block;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin-bottom: 8px;
+}
+
+.checkinout-box {
+  background: white;
+  border: 1px solid #d7dbe0;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.checkinout-box input[type="time"] {
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: #2d2d2d;
+  padding: 0;
+}
+
+.checkinout-box input[type="time"]:focus {
+  outline: none;
 }

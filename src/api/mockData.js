@@ -34,6 +34,8 @@ export const mockSpots = [
     photos: [driveway, hostParking],
     pricePerHour: 6,
     status: "available",
+    sizeTitle: "Mid Size",
+    host: { name: "Eric", rating: null },
     availability: [
       {
         date: nextDate(0),

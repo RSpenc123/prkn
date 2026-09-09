@@ -132,7 +132,7 @@
     position: absolute;
     color: #c3c3c3;
  
-    font-family: "Libre Baskerville", serif;
+    font-family: "Poppins", sans-serif;
     font-weight: 700;
   font-style: normal;
   margin-left: 10%;
@@ -151,7 +151,7 @@
   position: absolute;
   color: #c3c3c3;
  
-  font-family: "Libre Baskerville", serif;
+  font-family: "Poppins", sans-serif;
   font-weight: 700;
 font-style: normal;
 margin-left: 10%;
@@ -233,7 +233,7 @@ text-shadow: 20px;
   font-weight: 500;
   margin-bottom: 0px;
   margin-top: 0px;
-      font-family: "roboto-mono", monospace; 
+      font-family: "Poppins", sans-serif; 
       text-align: center;
 }
 
@@ -243,7 +243,7 @@ text-shadow: 20px;
   text-align: center;
   width: 80vw;
   /* margin-bottom: 7vh; */
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
 
 }
 
@@ -383,7 +383,7 @@ margin-top: 10%;
   font-weight: 700;
  margin-top: 30px;
  margin-left: 30px;
- font-family: "roboto-mono", monospace; 
+ font-family: "Poppins", sans-serif; 
  
 }
 
@@ -405,7 +405,7 @@ margin-top: 10%;
 }
 
 .hidden-text{
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
   margin-top: 50px;
   font-size: 3.3vh;
 }
@@ -444,7 +444,7 @@ margin-top: 10%;
   font-weight: 700;
   /* margin-top: 30px; */
   /* margin-left: 30px; */
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
  display: flex;
  justify-content: right;
  align-items: center;
@@ -499,13 +499,13 @@ margin-top: 10%;
 .earn-mobile{
   font-size: 26px;
   margin: 0px;
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
   
 }
 .earn2-mobile{
   font-size: 22px;
   margin: 0px;
-  font-family: "roboto-mono", monospace; 
+  font-family: "Poppins", sans-serif; 
 }
 
 .step1-mobile{
