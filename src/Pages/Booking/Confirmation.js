@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
@@ -13,6 +13,7 @@ export default function Confirmation() {
   const { addressId } = useParams();
   const navigate = useNavigate();
   const { spot, address, date, startTime, endTime, user, booking, reset } = useBooking();
+  const [copied, setCopied] = useState(false);
 
   if (!booking) {
     navigate(`/r/${addressId}`);
@@ -22,6 +23,19 @@ export default function Confirmation() {
   const handleDone = () => {
     reset();
     navigate("/");
+  };
+
+  const addressText = address ? `${address.line1}, ${address.city}, ${address.state} ${address.zip}` : "";
+
+  const handleCopyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(addressText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be blocked (permissions, non-HTTPS, etc.) —
+      // fail quietly rather than showing a scary error for a nice-to-have.
+    }
   };
 
   return (
@@ -43,10 +57,13 @@ export default function Confirmation() {
         <div className="summary-row">
           <span>{spot?.title}</span>
         </div>
-        <div className="summary-row">
-          <span>
-            {address ? `${address.line1}, ${address.city}, ${address.state} ${address.zip}` : ""}
-          </span>
+        <div className="summary-row confirmation-address-row">
+          <span>{addressText}</span>
+          {addressText && (
+            <button type="button" className="copy-address-btn" onClick={handleCopyAddress}>
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          )}
         </div>
         <div className="summary-row">
           <span>{date}</span>

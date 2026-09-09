@@ -17,7 +17,7 @@
 }
 
 .address-search-button {
-  background-color: #2d71ba;
+  background-color: #1E88E5;
   color: white;
   border: none;
   border-radius: 999px;
@@ -31,7 +31,7 @@
 }
 
 .address-search-button:hover:not(:disabled) {
-  background-color: #74adeb;
+  background-color: #42A5F5;
 }
 
 .address-search-button:disabled {

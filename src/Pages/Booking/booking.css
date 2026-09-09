@@ -23,14 +23,14 @@
   background: none;
   border: none;
   font-size: 22px;
-  color: #2d71ba;
+  color: #1E88E5;
   cursor: pointer;
   padding: 4px 8px;
   line-height: 1;
 }
 
 .booking-back:hover {
-  color: #74adeb;
+  color: #42A5F5;
 }
 
 .booking-logo {
@@ -62,7 +62,7 @@
 
 .booking-progress-fill {
   height: 100%;
-  background-color: #2d71ba;
+  background-color: #1E88E5;
   border-radius: 2px;
   transition: width 0.25s ease;
 }
@@ -90,8 +90,8 @@
   display: flex;
   gap: 14px;
   background: white;
-  border: 1px solid #e2e5ea;
-  border-radius: 10px;
+  border: 1.5px solid #e2e5ea;
+  border-radius: 14px;
   padding: 12px;
   cursor: pointer;
   text-align: left;
@@ -99,7 +99,7 @@
 }
 
 .spot-card:hover {
-  border-color: #74adeb;
+  border-color: #42A5F5;
 }
 
 .spot-card.unavailable {
@@ -111,7 +111,7 @@
   width: 96px;
   height: 96px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 12px;
   flex-shrink: 0;
 }
 
@@ -146,11 +146,11 @@
 }
 
 .spot-status.partial {
-  color: #b8860b;
+  color: #F5A623;
 }
 
 .spot-card-price {
-  color: #2d71ba;
+  color: #1E88E5;
   font-weight: 700;
   margin: 0;
 }
@@ -175,7 +175,7 @@
 }
 
 .spot-detail-price {
-  color: #2d71ba;
+  color: #1E88E5;
   font-weight: 700;
   margin: 0 0 14px 0;
 }
@@ -212,8 +212,8 @@
 }
 
 .date-pill.selected {
-  background-color: #2d71ba;
-  border-color: #2d71ba;
+  background-color: #1E88E5;
+  border-color: #1E88E5;
   color: white;
 }
 
@@ -240,7 +240,7 @@
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d7dbe0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-family: inherit;
   font-size: 14px;
   box-sizing: border-box;
@@ -263,7 +263,7 @@
 
 .btn-primary {
   width: 100%;
-  background-color: #2d71ba;
+  background-color: #1E88E5;
   color: white;
   border: none;
   border-radius: 999px;
@@ -276,7 +276,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #74adeb;
+  background-color: #42A5F5;
 }
 
 .btn-primary:disabled {
@@ -287,8 +287,8 @@
 .btn-secondary {
   width: 100%;
   background: white;
-  color: #2d71ba;
-  border: 1px solid #2d71ba;
+  color: #1E88E5;
+  border: 1px solid #1E88E5;
   border-radius: 999px;
   padding: 12px;
   font-family: inherit;
@@ -302,28 +302,55 @@
   background-color: #eef4fb;
 }
 
+.btn-accent {
+  width: 100%;
+  background-color: #F5A623;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 14px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.btn-accent:hover:not(:disabled) {
+  background-color: #E0941A;
+}
+
+.btn-accent:disabled {
+  background-color: #f6d29b;
+  cursor: not-allowed;
+}
+
 .auth-tabs {
   display: flex;
-  border-radius: 999px;
-  background: #eef1f4;
-  padding: 4px;
+  gap: 10px;
   margin-bottom: 22px;
 }
 
 .auth-tab {
   flex: 1;
   text-align: center;
-  padding: 10px;
-  border-radius: 999px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid #F5A623;
   cursor: pointer;
   font-weight: 700;
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #F5A623;
+  background: white;
 }
 
 .auth-tab.active {
-  background: white;
-  color: #2d71ba;
+  background: #F5A623;
+  color: white;
 }
 
 .method-toggle {
@@ -336,7 +363,7 @@
   flex: 1;
   text-align: center;
   border: 1px solid #d7dbe0;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 8px;
   cursor: pointer;
   font-size: 13px;
@@ -344,8 +371,8 @@
 }
 
 .method-option.selected {
-  border-color: #2d71ba;
-  color: #2d71ba;
+  border-color: #1E88E5;
+  color: #1E88E5;
   background: #eef4fb;
 }
 
@@ -374,14 +401,14 @@
   text-align: center;
   font-size: 22px;
   border: 1px solid #d7dbe0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-family: inherit;
 }
 
 .resend-link {
   background: none;
   border: none;
-  color: #2d71ba;
+  color: #1E88E5;
   font-family: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -391,8 +418,8 @@
 
 .summary-card {
   background: white;
-  border: 1px solid #e2e5ea;
-  border-radius: 10px;
+  border: 1.5px solid #90CAF9;
+  border-radius: 16px;
   padding: 16px;
   margin-bottom: 22px;
 }
@@ -403,6 +430,32 @@
   font-size: 14px;
   color: #374151;
   margin-bottom: 8px;
+}
+
+.confirmation-address-row {
+  align-items: center;
+  gap: 10px;
+}
+
+.confirmation-address-row span {
+  flex: 1;
+}
+
+.copy-address-btn {
+  flex-shrink: 0;
+  background: white;
+  color: #1E88E5;
+  border: 1.5px solid #1E88E5;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copy-address-btn:hover {
+  background: #eef4fb;
 }
 
 .summary-row.total {
@@ -426,7 +479,7 @@
   justify-content: center;
   gap: 8px;
   border: 1px solid #d7dbe0;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 12px;
   background: white;
   cursor: pointer;
@@ -437,9 +490,9 @@
 }
 
 .payment-method-btn.selected {
-  border-color: #2d71ba;
+  border-color: #1E88E5;
   background: #eef4fb;
-  color: #2d71ba;
+  color: #1E88E5;
 }
 
 .payment-method-btn.apple {

@@ -98,7 +98,7 @@ export default function SpotsList() {
   };
 
   return (
-    <BookingLayout title="Available Spots" step={1} onBack={() => navigate("/")}>
+    <BookingLayout title="Spots" step={1} onBack={() => navigate("/")}>
       {loading ? (
         <p className="loading-text">Loading spots...</p>
       ) : error ? (

@@ -6,9 +6,41 @@
 
 .booking-list-item {
   background: white;
-  border: 1px solid #e2e5ea;
-  border-radius: 10px;
+  border: 1.5px solid #e2e5ea;
+  border-radius: 14px;
   padding: 14px 16px;
+  cursor: pointer;
+}
+
+.booking-list-item:hover {
+  border-color: #42A5F5;
+}
+
+.booking-list-detail {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e5ea;
+  display: flex;
+  gap: 12px;
+}
+
+.booking-list-detail img {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.booking-list-detail-text p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.booking-list-detail-text .booking-list-detail-address {
+  font-weight: 700;
+  color: #2d2d2d;
 }
 
 .booking-list-title {
@@ -38,6 +70,6 @@
 }
 
 .booking-list-amount {
-  color: #2d71ba;
+  color: #1E88E5;
   font-weight: 700;
 }

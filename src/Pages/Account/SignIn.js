@@ -221,7 +221,7 @@ export default function SignIn() {
                 </div>
               )}
               {error && <p className="error-text">{error}</p>}
-              <button className="btn-primary" type="submit" disabled={submitting}>
+              <button className="btn-accent" type="submit" disabled={submitting}>
                 {submitting ? "Please wait..." : mode === "signup" ? "Create Account" : "Sign In"}
               </button>
             </form>

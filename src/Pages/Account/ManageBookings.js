@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../images/logo.png";
 import { useAuth } from "../../context/AuthContext";
-import { getMyBookings } from "../../api/client";
+import { getMyBookings, getSpot } from "../../api/client";
 import "../Booking/booking.css";
 import "./account.css";
 
@@ -23,6 +23,9 @@ export default function ManageBookings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [bookings, setBookings] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
+  // spotId -> { photo, address } | "loading" | "error"
+  const [spotDetails, setSpotDetails] = useState({});
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -50,6 +53,27 @@ export default function ManageBookings() {
 
   if (!isSignedIn) return null;
 
+  const toggleExpand = (booking) => {
+    const nextId = expandedId === booking.id ? null : booking.id;
+    setExpandedId(nextId);
+    if (nextId && booking.spotId && !spotDetails[booking.spotId]) {
+      setSpotDetails((prev) => ({ ...prev, [booking.spotId]: "loading" }));
+      getSpot(booking.spotId)
+        .then(({ spot, address }) => {
+          setSpotDetails((prev) => ({
+            ...prev,
+            [booking.spotId]: spot
+              ? {
+                  photo: spot.photos?.[0] || null,
+                  address: address ? `${address.line1}, ${address.city}, ${address.state} ${address.zip}` : "",
+                }
+              : "error",
+          }));
+        })
+        .catch(() => setSpotDetails((prev) => ({ ...prev, [booking.spotId]: "error" })));
+    }
+  };
+
   return (
     <div className="booking-page">
       <div className="booking-header">
@@ -68,18 +92,44 @@ export default function ManageBookings() {
           <p className="help-text">You haven't rented a spot yet.</p>
         ) : (
           <div className="booking-list">
-            {bookings.map((b) => (
-              <div key={b.id} className="booking-list-item">
-                <p className="booking-list-title">{b.spotTitle}</p>
-                <p className="booking-list-sub">
-                  {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
-                </p>
-                <div className="booking-list-row">
-                  <span className={`booking-list-status ${(b.status || "").toLowerCase()}`}>{b.status || "Booked"}</span>
-                  <span className="booking-list-amount">${b.amount.toFixed(2)}</span>
+            {bookings.map((b) => {
+              const detail = b.spotId ? spotDetails[b.spotId] : null;
+              return (
+                <div key={b.id} className="booking-list-item" onClick={() => toggleExpand(b)}>
+                  <p className="booking-list-title">{b.spotTitle}</p>
+                  <p className="booking-list-sub">
+                    {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
+                  </p>
+                  <div className="booking-list-row">
+                    <span className={`booking-list-status ${(b.status || "").toLowerCase()}`}>{b.status || "Booked"}</span>
+                    <span className="booking-list-amount">${b.amount.toFixed(2)}</span>
+                  </div>
+                  {expandedId === b.id && (
+                    <div className="booking-list-detail">
+                      {detail === "loading" ? (
+                        <p className="help-text" style={{ margin: 0 }}>
+                          Loading spot details...
+                        </p>
+                      ) : detail === "error" || !detail ? (
+                        <p className="help-text" style={{ margin: 0 }}>
+                          Couldn't load this spot's details.
+                        </p>
+                      ) : (
+                        <>
+                          {detail.photo && <img src={detail.photo} alt={b.spotTitle} />}
+                          <div className="booking-list-detail-text">
+                            <p className="booking-list-detail-address">{detail.address || b.spotTitle}</p>
+                            <p>
+                              {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
