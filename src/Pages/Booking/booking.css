@@ -113,9 +113,12 @@
 }
 
 .spot-card-photo {
+  /* Matches the real app's Spot Details photo box (Availibilities.js):
+     resizeMode "stretch" — scale to exactly fill the box, no cropping,
+     ever, regardless of the photo's own aspect ratio. */
   width: 100%;
-  height: 320px;
-  object-fit: cover;
+  height: 270px;
+  object-fit: fill;
   display: block;
 }
 
@@ -591,9 +594,11 @@
 }
 
 .spot-photo-main {
+  /* Same as .spot-card-photo: matches the real app's stretch-to-fill
+     behavior, no cropping regardless of photo shape. */
   width: 100%;
-  height: 320px;
-  object-fit: cover;
+  height: 270px;
+  object-fit: fill;
   border-radius: 18px;
   display: block;
 }
