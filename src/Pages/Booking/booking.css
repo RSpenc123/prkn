@@ -114,8 +114,12 @@
 
 .spot-card-photo {
   width: 100%;
-  height: 240px;
-  object-fit: cover;
+  aspect-ratio: 3 / 2;
+  /* contain (not cover) so a host's photo never gets cropped — a spot
+     number or important detail near the edge could otherwise be cut off
+     depending on the photo's own orientation/aspect ratio. */
+  object-fit: contain;
+  background: #eef1f4;
   display: block;
 }
 
