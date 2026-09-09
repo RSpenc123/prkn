@@ -171,11 +171,12 @@ function mapSpot(raw) {
   return {
     id: raw._id,
     addressId: encodeAddressKey(raw.latitude, raw.longitude),
-    // Prefer a short location label (matches the app's convention, e.g.
-    // "San Clemente") over the description — using the description here
-    // meant it showed up twice on the detail page once that page also
-    // started showing the description in its own labeled section.
-    title: raw.city || raw.address_line_1 || (raw.description ? raw.description.slice(0, 60) : "Parking spot"),
+    // Prefer the street address over the description — using the
+    // description here meant it showed up twice on the detail page once
+    // that page also started showing the description in its own labeled
+    // section. City is shown separately alongside this on the spots list,
+    // so leading with the address (not city again) avoids repeating it.
+    title: raw.address_line_1 || raw.city || (raw.description ? raw.description.slice(0, 60) : "Parking spot"),
     description: raw.description || "",
     photos: (raw.images || []).map(resolveMediaUrl),
     pricePerHour: derivePricePerHour(raw, availability),

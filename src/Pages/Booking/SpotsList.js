@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { getSpotsByAddress, getBookedRanges } from "../../api/client";
+import { getSpotsByAddress, getBookedRanges, getSpot } from "../../api/client";
 
 function todayStr() {
   const d = new Date();
@@ -32,6 +32,23 @@ async function computeBookingStatus(spot) {
   if (currentlyUnavailable) return "unavailable";
   if (anyBooking) return "partial";
   return "available";
+}
+
+// The search endpoint backing this list doesn't reliably return per-slot
+// pricing (its availability projection is missing price/price_type — see
+// the note in realClient.js), so a real spot's pricePerHour here is often
+// 0 even though it does have a real price. getParkingDetail (what the
+// detail page uses) doesn't have that gap, so for any spot missing a
+// price here, re-fetch its real detail just for the price rather than
+// showing a "see pricing" placeholder.
+async function resolveListPrice(spot) {
+  if (spot.pricePerHour > 0) return spot.pricePerHour;
+  try {
+    const { spot: detail } = await getSpot(spot.id);
+    return detail?.pricePerHour || 0;
+  } catch {
+    return spot.pricePerHour || 0;
+  }
 }
 
 // Hosts often title/describe spots like "Spot #1", "Spot #2 - near the
@@ -73,7 +90,13 @@ export default function SpotsList() {
         if (cancelled) return;
         const sorted = sortByLeadingNumber(spots);
         const withBookingStatus = await Promise.all(
-          sorted.map(async (spot) => ({ ...spot, bookingStatus: await computeBookingStatus(spot) }))
+          sorted.map(async (spot) => {
+            const [bookingStatus, pricePerHour] = await Promise.all([
+              computeBookingStatus(spot),
+              resolveListPrice(spot),
+            ]);
+            return { ...spot, bookingStatus, pricePerHour };
+          })
         );
         if (cancelled) return;
         setAddress(address);

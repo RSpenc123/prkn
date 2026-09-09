@@ -100,6 +100,7 @@ real values) with:
 ```
 REACT_APP_API_BASE_URL=https://your-backend-domain.example.com
 REACT_APP_GOOGLE_MAPS_API_KEY=your-browser-restricted-maps-key
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_or_pk_test_...
 ```
 
 - **`REACT_APP_API_BASE_URL`** — the backend's base URL. **Must be HTTPS** if
@@ -120,8 +121,18 @@ REACT_APP_GOOGLE_MAPS_API_KEY=your-browser-restricted-maps-key
   used with this API"), so everything here goes through
   `google.maps.places.Autocomplete` / `google.maps.Geocoder` instead, which
   referrer restrictions are actually designed for.
-- Stripe needs no frontend env var — `payment-sheet` returns a
-  `publishableKey` in its response, so the frontend picks it up dynamically.
+- **`REACT_APP_STRIPE_PUBLISHABLE_KEY`** — your Stripe **publishable** key
+  (`pk_live_...` / `pk_test_...`, from the same Stripe Dashboard as the
+  backend's secret key). Publishable keys are meant to be public/embedded
+  in frontend code — this isn't a secret. It's needed here because the
+  checkout page now initializes Stripe Elements in "deferred intent" mode
+  *before* any PaymentIntent exists, specifically so it can lock the form
+  to only `card` + `link` (Apple Pay/Google Pay ride on `card` as wallets)
+  client-side — that's what actually keeps Cash App Pay, bank transfers,
+  etc. off the payment form, regardless of what's enabled in the Stripe
+  Dashboard or on the PaymentIntent the backend creates. The real
+  PaymentIntent is still created by the backend's `payment-sheet` route,
+  just at submit time instead of on page load.
 
 ### CORS
 

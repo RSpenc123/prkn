@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
@@ -17,8 +17,17 @@ function formatTime(t) {
   return new Date(0, 0, 0, h, m).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-// Real Stripe Elements form — only rendered once a PaymentIntent exists.
-function StripePaymentForm({ amount, onSuccess, onError }) {
+// Real Stripe Elements form. Elements is initialized in "deferred intent"
+// mode (see the Payment component below) with an explicit paymentMethodTypes
+// list of just ['card', 'link'] — that's what actually keeps Cash App Pay,
+// bank transfers, etc. off this form. Those can't be filtered out via a
+// PaymentElement option on an *existing* PaymentIntent (that's controlled
+// entirely by what the backend/Dashboard enabled when creating it), but in
+// deferred mode nothing is submitted that Elements wasn't told to render in
+// the first place — the actual PaymentIntent only gets created (via
+// createPaymentIntent, still the same backend call) once the customer
+// submits, using elements.submit() to validate first.
+function StripePaymentForm({ amount, token, onSuccess, onError }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -27,6 +36,24 @@ function StripePaymentForm({ amount, onSuccess, onError }) {
     e.preventDefault();
     if (!stripe || !elements) return;
     setSubmitting(true);
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      onError(submitError.message || "Check your payment details.");
+      setSubmitting(false);
+      return;
+    }
+
+    let clientSecret;
+    try {
+      const result = await createPaymentIntent({ amount, token });
+      clientSecret = result.clientSecret;
+    } catch (err) {
+      onError(err.message || "Couldn't start payment.");
+      setSubmitting(false);
+      return;
+    }
+
     // return_url is where the bank sends the customer back to if the card
     // needs extra verification (3D Secure) — without it, that step can
     // fail outright instead of just not being needed. redirect:
@@ -34,6 +61,7 @@ function StripePaymentForm({ amount, onSuccess, onError }) {
     // don't need it, which is the common case.
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
+      clientSecret,
       redirect: "if_required",
       confirmParams: { return_url: window.location.href },
     });
@@ -132,45 +160,27 @@ function StubPaymentForm({ amount, onPay }) {
   );
 }
 
+// Loaded once at module scope, not per-render. Publishable keys are safe
+// to ship in frontend code/env (that's what they're for) — this is the
+// one thing that has to come from the website's own env rather than the
+// backend, since Elements now initializes in deferred-intent mode (see
+// StripePaymentForm above) before any PaymentIntent — and so before any
+// backend call — exists yet.
+const stripePromise =
+  !IS_MOCK && process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY
+    ? loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY)
+    : null;
+
 export default function Payment() {
   const { addressId, spotId } = useParams();
   const navigate = useNavigate();
   const { spot, date, startTime, endTime, availabilityId, priceType, user, profile, update } = useBooking();
   const [error, setError] = useState("");
-  const [stripePromise, setStripePromise] = useState(null);
-  const [clientSecret, setClientSecret] = useState(null);
-  const [loadingIntent, setLoadingIntent] = useState(!IS_MOCK);
 
   const base = `/r/${addressId}/${spotId}`;
 
   const hours = spot && startTime && endTime ? hoursBetween(startTime, endTime) : 0;
   const amount = spot ? parseFloat((hours * spot.pricePerHour).toFixed(2)) : 0;
-
-  useEffect(() => {
-    if (IS_MOCK || !profile) return;
-    if (!amount || amount <= 0) {
-      setError("This spot doesn't have a valid price set yet — contact the host before booking.");
-      setLoadingIntent(false);
-      return;
-    }
-    let cancelled = false;
-    createPaymentIntent({ amount, token: user.token })
-      .then(({ clientSecret, publishableKey }) => {
-        if (cancelled) return;
-        setStripePromise(loadStripe(publishableKey));
-        setClientSecret(clientSecret);
-        setLoadingIntent(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err.message || "Couldn't start payment.");
-        setLoadingIntent(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile]);
 
   if (!profile) {
     navigate(`${base}/profile`);
@@ -230,14 +240,26 @@ export default function Payment() {
 
       {IS_MOCK ? (
         <StubPaymentForm amount={amount} onPay={finalizeBooking} />
-      ) : loadingIntent ? (
-        <p className="loading-text">Preparing payment...</p>
-      ) : clientSecret && stripePromise ? (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <StripePaymentForm amount={amount} onSuccess={finalizeBooking} onError={setError} />
-        </Elements>
+      ) : !amount || amount <= 0 ? (
+        <p className="error-text">This spot doesn't have a valid price set yet — contact the host before booking.</p>
+      ) : !stripePromise ? (
+        <p className="error-text">
+          Payment isn't configured yet — missing REACT_APP_STRIPE_PUBLISHABLE_KEY.
+        </p>
       ) : (
-        <p className="error-text">Payment isn't available right now.</p>
+        <Elements
+          stripe={stripePromise}
+          options={{
+            mode: "payment",
+            amount: Math.round(amount * 100),
+            currency: "usd",
+            // The actual mechanism that keeps Cash App Pay/bank transfers
+            // off this form — see StripePaymentForm's comment above.
+            paymentMethodTypes: ["card", "link"],
+          }}
+        >
+          <StripePaymentForm amount={amount} token={user.token} onSuccess={finalizeBooking} onError={setError} />
+        </Elements>
       )}
     </BookingLayout>
   );

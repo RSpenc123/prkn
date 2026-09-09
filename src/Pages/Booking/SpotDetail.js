@@ -157,9 +157,13 @@ export default function SpotDetail() {
         setSpot(spot ? { ...spot, availability: upcoming } : spot);
         setLoading(false);
         if (upcoming.length) {
-          applyDefaultTimes(upcoming[0]);
-          setBookedRanges(rangesByAvailability[upcoming[0].availabilityId] || []);
-          const d = new Date(`${upcoming[0].date}T00:00:00`);
+          // Prefer the first date that actually has usable time left right
+          // now — "today" can technically qualify above (its window hasn't
+          // ended yet) while still having no real room before it closes.
+          const firstUsable = upcoming.find((a) => computeDefaultMinutes(a)) || upcoming[0];
+          applyDefaultTimes(firstUsable);
+          setBookedRanges(rangesByAvailability[firstUsable.availabilityId] || []);
+          const d = new Date(`${firstUsable.date}T00:00:00`);
           setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
         }
       })
@@ -174,10 +178,10 @@ export default function SpotDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spotId]);
 
-  // Defaults the picker to "now" (or the slot's own start, whichever is
-  // later) rounded to a clean 5-minute mark, with the end time an hour
-  // after that — matches the mobile app's behavior.
-  const applyDefaultTimes = (availabilityEntry) => {
+  // The {start, end} minute default for this entry, or null if there's no
+  // usable time left in it right now — e.g. "today" whose window hasn't
+  // technically ended yet but "now" rounds up to (or past) its own close.
+  const computeDefaultMinutes = (availabilityEntry) => {
     const slot = availabilityEntry.slots[0];
     const slotStartMin = timeToMinutes(slot.start);
     const slotEndMin = timeToMinutes(slot.end);
@@ -185,9 +189,17 @@ export default function SpotDetail() {
     const nowMin = isToday ? roundUpTo5(new Date().getHours() * 60 + new Date().getMinutes()) : slotStartMin;
     const start = clamp(Math.max(nowMin, slotStartMin), slotStartMin, slotEndMin);
     const end = clamp(start + 60, slotStartMin, slotEndMin);
+    return start < end ? { start, end } : null;
+  };
+
+  // Defaults the picker to "now" (or the slot's own start, whichever is
+  // later) rounded to a clean 5-minute mark, with the end time an hour
+  // after that — matches the mobile app's behavior.
+  const applyDefaultTimes = (availabilityEntry) => {
+    const result = computeDefaultMinutes(availabilityEntry);
     setSelectedDate(availabilityEntry.date);
-    setStartTime(minutesToTime(start));
-    setEndTime(start === end ? "" : minutesToTime(end));
+    setStartTime(result ? minutesToTime(result.start) : "");
+    setEndTime(result ? minutesToTime(result.end) : "");
   };
 
   const handleSelectDate = (availabilityEntry) => {
