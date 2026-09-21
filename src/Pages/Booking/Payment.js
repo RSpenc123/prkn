@@ -4,7 +4,14 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { IS_MOCK, createBooking, createPaymentIntent } from "../../api/client";
+import {
+  IS_MOCK,
+  createBooking,
+  createPaymentIntent,
+  createPendingBooking,
+  confirmBookingPayment,
+  cancelPendingBooking,
+} from "../../api/client";
 
 function hoursBetween(start, end) {
   const [sh, sm] = start.split(":").map(Number);
@@ -27,7 +34,7 @@ function formatTime(t) {
 // the first place — the actual PaymentIntent only gets created (via
 // createPaymentIntent, still the same backend call) once the customer
 // submits, using elements.submit() to validate first.
-function StripePaymentForm({ amount, token, onSuccess, onError }) {
+function StripePaymentForm({ amount, token, onCreatePendingBooking, onSuccess, onError }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -44,13 +51,27 @@ function StripePaymentForm({ amount, token, onSuccess, onError }) {
       return;
     }
 
+    // The backend now requires a pending booking to already exist before
+    // it'll create a PaymentIntent (it looks up the charge amount and host
+    // payout account from that booking, not from whatever the client
+    // sends) — see createPendingBooking's doc comment in realClient.js.
+    let pending;
+    try {
+      pending = await onCreatePendingBooking();
+    } catch (err) {
+      onError(err.message || "Couldn't reserve this spot. Try again.");
+      setSubmitting(false);
+      return;
+    }
+
     let clientSecret;
     try {
-      const result = await createPaymentIntent({ amount, token });
+      const result = await createPaymentIntent({ amount, bookingId: pending.bookingId, token });
       clientSecret = result.clientSecret;
     } catch (err) {
       onError(err.message || "Couldn't start payment.");
       setSubmitting(false);
+      cancelPendingBooking({ token, bookingId: pending.bookingId, spotId: pending.spotId });
       return;
     }
 
@@ -68,12 +89,14 @@ function StripePaymentForm({ amount, token, onSuccess, onError }) {
     setSubmitting(false);
     if (error) {
       onError(error.message || "Payment failed.");
+      cancelPendingBooking({ token, bookingId: pending.bookingId, spotId: pending.spotId });
       return;
     }
     if (paymentIntent && paymentIntent.status === "succeeded") {
-      onSuccess(paymentIntent.id);
+      onSuccess(pending.bookingId, pending.spotId, paymentIntent.id);
     } else {
       onError("Payment didn't complete. Try again.");
+      cancelPendingBooking({ token, bookingId: pending.bookingId, spotId: pending.spotId });
     }
   };
 
@@ -187,7 +210,9 @@ export default function Payment() {
     return null;
   }
 
-  const finalizeBooking = async (transactionId) => {
+  // Mock mode: no real backend ordering constraint, so this stays the
+  // original single-step "create the booking once payment succeeds" flow.
+  const finalizeMockBooking = async (transactionId) => {
     setError("");
     try {
       const booking = await createBooking({
@@ -217,6 +242,51 @@ export default function Payment() {
     }
   };
 
+  // Real mode: the backend now requires the booking to exist (PENDING)
+  // before it'll issue a PaymentIntent — see createPendingBooking's doc
+  // comment in realClient.js. StripePaymentForm creates it via this
+  // callback right before requesting payment.
+  const createPending = () =>
+    createPendingBooking({
+      token: user.token,
+      spotId: spot.id,
+      spotSize: spot.size,
+      availabilityId,
+      priceType,
+      date,
+      startTime,
+      endTime,
+      hours,
+      amount,
+      name: profile.name,
+      contact: user.contact,
+      method: user.method,
+      phone: profile.phone,
+      carMake: profile.carMake,
+      carModel: profile.carModel,
+      vehicleNumber: profile.vehicleNumber,
+    });
+
+  const finalizeRealBooking = async (bookingId, pendingSpotId, transactionId) => {
+    setError("");
+    try {
+      const booking = await confirmBookingPayment({
+        token: user.token,
+        bookingId,
+        spotId: pendingSpotId,
+        amount,
+        transactionId,
+        date,
+        startTime,
+        endTime,
+      });
+      update({ booking });
+      navigate(`${base}/confirmation`);
+    } catch (err) {
+      setError(err.message || "Payment succeeded but the booking couldn't be confirmed. Contact support.");
+    }
+  };
+
   return (
     <BookingLayout title="Payment" step={6}>
       <div className="summary-card">
@@ -239,7 +309,7 @@ export default function Payment() {
       {error && <p className="error-text">{error}</p>}
 
       {IS_MOCK ? (
-        <StubPaymentForm amount={amount} onPay={finalizeBooking} />
+        <StubPaymentForm amount={amount} onPay={finalizeMockBooking} />
       ) : !amount || amount <= 0 ? (
         <p className="error-text">This spot doesn't have a valid price set yet — contact the host before booking.</p>
       ) : !stripePromise ? (
@@ -258,7 +328,13 @@ export default function Payment() {
             paymentMethodTypes: ["card", "link"],
           }}
         >
-          <StripePaymentForm amount={amount} token={user.token} onSuccess={finalizeBooking} onError={setError} />
+          <StripePaymentForm
+            amount={amount}
+            token={user.token}
+            onCreatePendingBooking={createPending}
+            onSuccess={finalizeRealBooking}
+            onError={setError}
+          />
         </Elements>
       )}
     </BookingLayout>

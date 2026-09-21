@@ -10,8 +10,21 @@
 //   POST /api/loginNew             public   { type, email?, phone_no?, password, device_token, latitude, longitude }
 //   POST /api/verifyOtp            public   { user_id, type, otp } -- otp is a 4-digit NUMBER
 //   POST /api/resendOtp            public   { user_id, type }
-//   POST /api/payment-sheet        JWT      { amount } -> Stripe PaymentIntent (client_secret + publishableKey)
+//   POST /api/payment-sheet        JWT      { booking_id } -> Stripe PaymentIntent (client_secret + publishableKey).
+//                                            Requires a PENDING booking (status 'pending') already owned by this
+//                                            renter to exist — the backend computes the charge amount itself from
+//                                            that booking's BookingStatus rows and throws "Pending booking not
+//                                            found for this renter" otherwise. So createBooking has to run BEFORE
+//                                            this, not after (confirmed by reading the actual production branch of
+//                                            the backend, which differs from what's on its default/master branch).
 //   POST /api/createBooking        JWT      { name, email, phone_no, car_model, vehicle_number, availability_ids, slots[], spot_id, amount, transaction_id, grandTotal }
+//                                            transaction_id may be "" at this point (schema allows empty) — the
+//                                            real Stripe payment intent id isn't known yet. Creates the booking in
+//                                            PENDING status.
+//   POST /api/updateBookingStatus  JWT      { booking_id, transaction_id, status: "Booked", spot_id, amount, timezone }
+//                                            Called once payment actually succeeds, with the real transaction id.
+//                                            Also accepts status: "Payment Failed" to clean up an abandoned pending
+//                                            booking if payment never completes.
 //   POST /api/getBookingsByAvailabilitytId  public  { availability_id }
 //   GET  /api/getProfile           JWT      -> current user's record
 //   POST /api/updateProfileAndAddress JWT   { name?, email?, phone_no?, ... } (all optional strings)
@@ -409,10 +422,14 @@ export async function resendCode({ userId, type }) {
   return { sent: !!res.status };
 }
 
-export async function createPaymentIntent({ amount, token }) {
+// bookingId must belong to an existing PENDING booking owned by this same
+// renter (see createPendingBooking below) — the backend computes the real
+// charge amount itself from that booking's records and throws "Pending
+// booking not found for this renter" if none exists yet.
+export async function createPaymentIntent({ amount, bookingId, token }) {
   const res = await request("/api/payment-sheet", {
     method: "POST",
-    body: { amount },
+    body: { amount, booking_id: bookingId },
     token,
   });
   if (!res.status) throw new Error(messageText(res.message));
@@ -427,7 +444,12 @@ function combineDateTimeToEpoch(dateStr, timeStr) {
   return new Date(`${dateStr}T${timeStr}:00`).getTime();
 }
 
-export async function createBooking({
+// Creates the booking in PENDING status, before any payment happens. This
+// has to run before createPaymentIntent now — the backend's payment-sheet
+// route looks up this renter's existing pending booking to determine the
+// charge amount and host payout account, rather than trusting whatever the
+// client sends.
+export async function createPendingBooking({
   token,
   spotId,
   spotSize,
@@ -445,7 +467,6 @@ export async function createBooking({
   carMake,
   carModel,
   vehicleNumber,
-  transactionId,
 }) {
   const startEpoch = combineDateTimeToEpoch(date, startTime);
   const endEpoch = combineDateTimeToEpoch(date, endTime);
@@ -488,57 +509,71 @@ export async function createBooking({
       ],
       spot_id: spotId,
       amount,
-      transaction_id: transactionId,
+      // No real payment has happened yet — the backend's schema requires
+      // this field but explicitly allows an empty string. The real Stripe
+      // payment intent id is filled in later by confirmBookingPayment.
+      transaction_id: "",
       grandTotal: amount,
       timezone,
     },
     token,
   });
   if (!res.status) throw new Error(messageText(res.message));
-  const data = res.data || {};
-  const bookingId = data._id || "";
+  const bookingId = (res.data || {})._id || "";
+  if (!bookingId) throw new Error("Couldn't reserve this spot. Try again.");
+  return { bookingId, spotId, date, startTime, endTime };
+}
 
-  // createBooking alone leaves the booking in whatever pending status it's
-  // created with — the app's own flow makes this second call once payment
-  // succeeds, to flip it to "Booked" (see updateBookingStatus's own doc
-  // comment: "Update Booking Status like booked or payment Failed"). The
-  // website skipped this entirely, which is why a fully-paid website
-  // booking still shows as processing in the app. Must match the backend's
-  // status enum exactly ('Booked', capitalized) — confirmed against
-  // src/shared/enums/status.enum.ts in the backend repo. A lowercase
-  // "booked" silently fails the backend's `status == status.BOOKED` check,
-  // which also means it skips the renter's booking-confirmation text.
-  if (bookingId) {
-    try {
-      await request("/api/updateBookingStatus", {
-        method: "POST",
-        body: {
-          booking_id: bookingId,
-          transaction_id: transactionId,
-          status: "Booked",
-          spot_id: spotId,
-          amount,
-          timezone,
-        },
-        token,
-      });
-    } catch (err) {
-      // The booking itself already succeeded and the customer's already
-      // been charged — don't fail the whole checkout over this follow-up
-      // call. Surface it for debugging instead of losing it silently.
-      console.error("updateBookingStatus failed:", err);
-    }
-  }
-
+// Flips a pending booking to Booked once payment has actually succeeded.
+// Must match the backend's status enum exactly ('Booked', capitalized) —
+// confirmed against src/shared/enums/status.enum.ts in the backend repo. A
+// lowercase "booked" silently fails the backend's `status == status.BOOKED`
+// check, which also means it skips the renter's booking-confirmation text.
+export async function confirmBookingPayment({ token, bookingId, spotId, amount, transactionId, date, startTime, endTime }) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const res = await request("/api/updateBookingStatus", {
+    method: "POST",
+    body: {
+      booking_id: bookingId,
+      transaction_id: transactionId,
+      status: "Booked",
+      spot_id: spotId,
+      amount,
+      timezone,
+    },
+    token,
+  });
+  if (!res.status) throw new Error(messageText(res.message));
   return {
     bookingId,
-    confirmationCode: bookingId ? bookingId.slice(-6).toUpperCase() : "CONFIRMED",
+    confirmationCode: bookingId.slice(-6).toUpperCase(),
     spotId,
     date,
     startTime,
     endTime,
     status: "confirmed",
   };
+}
+
+// Best-effort cleanup for a pending booking whose payment never went
+// through (card declined, user backed out mid-checkout, a network error) —
+// otherwise it's left behind as an orphaned pending row. Never throws; a
+// failure here shouldn't block showing the real payment error to the user.
+export async function cancelPendingBooking({ token, bookingId, spotId }) {
+  try {
+    await request("/api/updateBookingStatus", {
+      method: "POST",
+      body: {
+        booking_id: bookingId,
+        transaction_id: "",
+        status: "Payment Failed",
+        spot_id: spotId,
+      },
+      token,
+    });
+  } catch (err) {
+    console.error("cancelPendingBooking failed:", err);
+  }
 }
 
 // Strips a stored "+1XXXXXXXXXX" back down to plain digits for display —

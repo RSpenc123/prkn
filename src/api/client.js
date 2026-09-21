@@ -26,6 +26,13 @@ export const verifyCode = client.verifyCode;
 export const resendCode = client.resendCode;
 export const createPaymentIntent = client.createPaymentIntent;
 export const createBooking = client.createBooking;
+// Only meaningful against the real backend — see realClient.js's doc
+// comments on payment-sheet/createBooking for why the checkout flow has to
+// create the booking before requesting payment there. Mock mode keeps
+// using the single-step createBooking above.
+export const createPendingBooking = client === realClient ? realClient.createPendingBooking : undefined;
+export const confirmBookingPayment = client === realClient ? realClient.confirmBookingPayment : undefined;
+export const cancelPendingBooking = client === realClient ? realClient.cancelPendingBooking : undefined;
 export const getProfile = client.getProfile;
 export const updateAccountProfile = client.updateAccountProfile;
 export const changeAccountPassword = client.changeAccountPassword;
