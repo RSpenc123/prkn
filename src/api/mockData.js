@@ -36,6 +36,8 @@ export const mockSpots = [
     pricePerHour: 6,
     status: "available",
     sizeTitle: "Mid Size",
+    nearbyLocations: ["Hermosa Beach Pier", "The Strand"],
+    specialInstructions: "Gate code 4521#. Pull all the way to the fence.",
     host: { name: "Eric", rating: null },
     availability: [
       {

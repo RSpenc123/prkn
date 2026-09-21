@@ -125,7 +125,11 @@ export default function BookedSpotDetail() {
             </div>
 
             <h3 className="booked-detail-section-title">Nearby Locations</h3>
-            <p className="booked-detail-na">N/A</p>
+            {spot.nearbyLocations && spot.nearbyLocations.length > 0 ? (
+              <p className="booked-detail-text">{spot.nearbyLocations.join(", ")}</p>
+            ) : (
+              <p className="booked-detail-na">N/A</p>
+            )}
 
             {spot.sizeTitle && (
               <div className="booked-detail-size-tag">
@@ -141,7 +145,9 @@ export default function BookedSpotDetail() {
             <p className="booked-detail-text">{spot.description || "No description provided."}</p>
 
             <h3 className="booked-detail-section-title">Gate codes/Special instructions</h3>
-            <p className="booked-detail-na">N/A</p>
+            <p className={spot.specialInstructions ? "booked-detail-text" : "booked-detail-na"}>
+              {spot.specialInstructions || "N/A"}
+            </p>
 
             <h3 className="booked-detail-section-title">Your Bookings</h3>
             <div className="booked-detail-bookings-list">

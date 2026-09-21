@@ -202,6 +202,10 @@ function mapSpot(raw) {
     // the sizeService lookup, host_details from the spot's owner) — not
     // used before now.
     sizeTitle: raw.size_details?.title || null,
+    // Free-text fields a host may or may not have filled in — most spots
+    // won't have either set, so these can legitimately come back empty.
+    nearbyLocations: Array.isArray(raw.near_by_location) ? raw.near_by_location.filter(Boolean) : [],
+    specialInstructions: raw.additional_info || "",
     host: raw.host_details
       ? {
           name: raw.host_details.name || "",
