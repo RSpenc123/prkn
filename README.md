@@ -76,6 +76,39 @@ links to `/r/:addressId`, which shows every spot at that address and walks the
 guest through: pick a spot → choose a date/time → sign up or sign in → verify
 → enter name/car → pay → confirmation.
 
+### Pulling the latest changes & running locally
+
+In a terminal, inside this project folder:
+
+```
+git checkout claude/parkn-website-rental-flow-69e2h4
+git pull origin claude/parkn-website-rental-flow-69e2h4
+```
+
+If you haven't checked out that branch on this machine before, use this
+instead:
+
+```
+git fetch origin
+git checkout -b claude/parkn-website-rental-flow-69e2h4 origin/claude/parkn-website-rental-flow-69e2h4
+```
+
+Then (re)start the dev server so it picks up the change — it only reads
+`.env`/`.env.local` and new code at startup, not live:
+
+```
+npm start
+```
+
+To actually talk to the real backend (and trigger real texts/emails) rather
+than mock data, `.env` (or `.env.local`) in this folder needs:
+
+```
+REACT_APP_API_BASE_URL=https://api.prk-n.com
+```
+
+That's the confirmed-current production API domain.
+
 ### Mock mode vs. real backend
 
 By default (no env vars set) the whole flow runs on **mock data** — nothing
@@ -98,16 +131,15 @@ Create `.env.local` in the project root (already gitignored — never commit
 real values) with:
 
 ```
-REACT_APP_API_BASE_URL=https://your-backend-domain.example.com
+REACT_APP_API_BASE_URL=https://api.prk-n.com
 REACT_APP_GOOGLE_MAPS_API_KEY=your-browser-restricted-maps-key
 REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_or_pk_test_...
 ```
 
-- **`REACT_APP_API_BASE_URL`** — the backend's base URL. **Must be HTTPS** if
-  the website itself is served over HTTPS (a browser blocks a plain-HTTP API
-  call from an HTTPS page — "mixed content"). The backend was last known to
-  run on plain HTTP at a raw IP; that needs a domain + TLS certificate before
-  this can point at it in production.
+- **`REACT_APP_API_BASE_URL`** — the backend's base URL;
+  `https://api.prk-n.com` is the confirmed-current production API domain
+  (HTTPS, real domain — safe against the "mixed content" issue an HTTPS
+  site would otherwise hit calling a plain-HTTP API).
 - **`REACT_APP_GOOGLE_MAPS_API_KEY`** — a **separate, browser-restricted**
   Google Maps API key, HTTP referrer restricted to your domain (add
   `localhost/*` too for local testing). Do not reuse the backend's own
