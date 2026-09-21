@@ -453,6 +453,10 @@ export async function createBooking({
   // contact if they signed up by phone, otherwise the number collected on
   // the profile step.
   const phoneNo = method === "phone" ? contact : phone;
+  // The backend formats booking-confirmation text/email times with this
+  // (defaulting to UTC if omitted) — send the renter's actual local zone
+  // so the times they read match their own clock.
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const res = await request("/api/createBooking", {
     method: "POST",
     body: {
@@ -486,6 +490,7 @@ export async function createBooking({
       amount,
       transaction_id: transactionId,
       grandTotal: amount,
+      timezone,
     },
     token,
   });
@@ -513,6 +518,7 @@ export async function createBooking({
           status: "Booked",
           spot_id: spotId,
           amount,
+          timezone,
         },
         token,
       });
