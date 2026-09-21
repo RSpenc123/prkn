@@ -495,15 +495,14 @@ export async function createBooking({
 
   // createBooking alone leaves the booking in whatever pending status it's
   // created with — the app's own flow makes this second call once payment
-  // succeeds, to flip it to "booked" (see updateBookingStatus's own doc
+  // succeeds, to flip it to "Booked" (see updateBookingStatus's own doc
   // comment: "Update Booking Status like booked or payment Failed"). The
   // website skipped this entirely, which is why a fully-paid website
-  // booking still shows as processing in the app. "booked" here is
-  // inferred from the shared status enum's lowercase convention seen
-  // elsewhere (e.g. a Spot's "active" status) — not confirmed against the
-  // enum's source, since that file was never shared. If the app still
-  // shows "processing" after this ships, the exact string needs
-  // double-checking with the developer.
+  // booking still shows as processing in the app. Must match the backend's
+  // status enum exactly ('Booked', capitalized) — confirmed against
+  // src/shared/enums/status.enum.ts in the backend repo. A lowercase
+  // "booked" silently fails the backend's `status == status.BOOKED` check,
+  // which also means it skips the renter's booking-confirmation text.
   if (bookingId) {
     try {
       await request("/api/updateBookingStatus", {
@@ -511,7 +510,7 @@ export async function createBooking({
         body: {
           booking_id: bookingId,
           transaction_id: transactionId,
-          status: "booked",
+          status: "Booked",
           spot_id: spotId,
           amount,
         },
