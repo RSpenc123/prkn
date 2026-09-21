@@ -111,7 +111,14 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
         } else {
           setError("Couldn't get your location. Try entering an address instead.");
         }
-      }
+      },
+      // Without this, browsers/devices can return a fast, coarse
+      // (WiFi/IP-based) location that's off by a block or more — close
+      // enough that "nearest listed spot" search still lands right, but
+      // not precise enough for the reverse-geocoded address label to
+      // read correctly. This asks for the device's best available fix
+      // (real GPS on a phone) instead, at the cost of taking a bit longer.
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
