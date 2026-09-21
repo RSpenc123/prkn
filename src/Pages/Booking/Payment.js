@@ -24,16 +24,25 @@ function formatTime(t) {
   return new Date(0, 0, 0, h, m).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-// Real Stripe Elements form. Elements is initialized in "deferred intent"
-// mode (see the Payment component below) with an explicit paymentMethodTypes
-// list of just ['card', 'link'] — that's what actually keeps Cash App Pay,
-// bank transfers, etc. off this form. Those can't be filtered out via a
-// PaymentElement option on an *existing* PaymentIntent (that's controlled
-// entirely by what the backend/Dashboard enabled when creating it), but in
-// deferred mode nothing is submitted that Elements wasn't told to render in
-// the first place — the actual PaymentIntent only gets created (via
-// createPaymentIntent, still the same backend call) once the customer
+// Real Stripe Elements form, initialized in "deferred intent" mode (see the
+// Payment component below) — the actual PaymentIntent only gets created
+// (via createPaymentIntent, still the same backend call) once the customer
 // submits, using elements.submit() to validate first.
+//
+// Elements is left to auto-detect available payment methods (no explicit
+// paymentMethodTypes list) because the backend always creates the real
+// PaymentIntent with automatic_payment_methods enabled, not an explicit
+// type list — confirmed by reading booking.controller.ts's payment-sheet
+// route on the backend's production branch. Stripe requires those two to
+// agree: an Elements instance told an explicit type list can't confirm a
+// PaymentIntent that was created with automatic_payment_methods (or vice
+// versa) — "Payment details were collected through Stripe Elements using
+// payment_method_types and cannot be confirmed through the API configured
+// with automatic payment methods." So whatever's enabled in the Stripe
+// Dashboard for this account is what shows here; narrowing that list (to
+// exclude Cash App Pay, bank transfers, etc.) has to happen in the
+// Dashboard, not in this file — there's no backend change in scope here to
+// pair with a client-side type list.
 function StripePaymentForm({ amount, token, onCreatePendingBooking, onSuccess, onError }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -323,9 +332,9 @@ export default function Payment() {
             mode: "payment",
             amount: Math.round(amount * 100),
             currency: "usd",
-            // The actual mechanism that keeps Cash App Pay/bank transfers
-            // off this form — see StripePaymentForm's comment above.
-            paymentMethodTypes: ["card", "link"],
+            // No explicit paymentMethodTypes here — see StripePaymentForm's
+            // comment above for why that has to match the backend's
+            // automatic_payment_methods PaymentIntent, not fight it.
           }}
         >
           <StripePaymentForm
