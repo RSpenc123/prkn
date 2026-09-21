@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../images/logo.png";
 import { useAuth } from "../../context/AuthContext";
-import { getMyBookings, getSpot } from "../../api/client";
+import { getMyBookings } from "../../api/client";
 import "../Booking/booking.css";
 import "./account.css";
 
@@ -17,15 +17,22 @@ function formatDateTime(ms) {
   });
 }
 
+// Drops a trailing ".00" so a whole-dollar amount reads as "$1" rather
+// than "$1.00", matching the app's own display.
+function formatMoney(amount) {
+  return Number.isInteger(amount) ? `${amount}` : amount.toFixed(2);
+}
+
+const FILTERS = ["All", "Booked", "Completed", "Cancelled"];
+
 export default function ManageBookings() {
   const navigate = useNavigate();
   const { user, isSignedIn } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [bookings, setBookings] = useState([]);
-  const [expandedId, setExpandedId] = useState(null);
-  // spotId -> { photo, address } | "loading" | "error"
-  const [spotDetails, setSpotDetails] = useState({});
+  const [filter, setFilter] = useState("All");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -53,26 +60,8 @@ export default function ManageBookings() {
 
   if (!isSignedIn) return null;
 
-  const toggleExpand = (booking) => {
-    const nextId = expandedId === booking.id ? null : booking.id;
-    setExpandedId(nextId);
-    if (nextId && booking.spotId && !spotDetails[booking.spotId]) {
-      setSpotDetails((prev) => ({ ...prev, [booking.spotId]: "loading" }));
-      getSpot(booking.spotId)
-        .then(({ spot, address }) => {
-          setSpotDetails((prev) => ({
-            ...prev,
-            [booking.spotId]: spot
-              ? {
-                  photo: spot.photos?.[0] || null,
-                  address: address ? `${address.line1}, ${address.city}, ${address.state} ${address.zip}` : "",
-                }
-              : "error",
-          }));
-        })
-        .catch(() => setSpotDetails((prev) => ({ ...prev, [booking.spotId]: "error" })));
-    }
-  };
+  const visibleBookings =
+    filter === "All" ? bookings : bookings.filter((b) => (b.status || "").toLowerCase() === filter.toLowerCase());
 
   return (
     <div className="booking-page">
@@ -84,52 +73,73 @@ export default function ManageBookings() {
         <h1 className="booking-header-title">Manage Bookings</h1>
       </div>
       <div className="booking-content">
+        <div className="booking-list-filter-row">
+          <div className="booking-list-filter">
+            <button type="button" onClick={() => setFilterOpen((v) => !v)}>
+              {filter}
+              <span className="booking-list-filter-caret">▾</span>
+            </button>
+            {filterOpen && (
+              <div className="booking-list-filter-menu">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => {
+                      setFilter(f);
+                      setFilterOpen(false);
+                    }}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <p className="loading-text">Loading your bookings...</p>
         ) : error ? (
           <p className="error-text">{error}</p>
-        ) : bookings.length === 0 ? (
-          <p className="help-text">You haven't rented a spot yet.</p>
+        ) : visibleBookings.length === 0 ? (
+          <p className="help-text">
+            {bookings.length === 0 ? "You haven't rented a spot yet." : "No bookings match that filter."}
+          </p>
         ) : (
           <div className="booking-list">
-            {bookings.map((b) => {
-              const detail = b.spotId ? spotDetails[b.spotId] : null;
-              return (
-                <div key={b.id} className="booking-list-item" onClick={() => toggleExpand(b)}>
+            {visibleBookings.map((b) => (
+              <div
+                key={b.id}
+                className="booking-list-item"
+                onClick={() => b.spotId && navigate(`/account/bookings/${b.spotId}`)}
+              >
+                <div className="booking-list-top-row">
                   <p className="booking-list-title">{b.spotTitle}</p>
-                  <p className="booking-list-sub">
-                    {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
-                  </p>
-                  <div className="booking-list-row">
-                    <span className={`booking-list-status ${(b.status || "").toLowerCase()}`}>{b.status || "Booked"}</span>
-                    <span className="booking-list-amount">${b.amount.toFixed(2)}</span>
+                  <div className="booking-list-top-right">
+                    <span className="booking-list-amount">${formatMoney(b.amount)}</span>
+                    <span className={`booking-list-status ${(b.status || "").toLowerCase()}`}>
+                      {b.status || "Booked"}
+                    </span>
                   </div>
-                  {expandedId === b.id && (
-                    <div className="booking-list-detail">
-                      {detail === "loading" ? (
-                        <p className="help-text" style={{ margin: 0 }}>
-                          Loading spot details...
-                        </p>
-                      ) : detail === "error" || !detail ? (
-                        <p className="help-text" style={{ margin: 0 }}>
-                          Couldn't load this spot's details.
-                        </p>
-                      ) : (
-                        <>
-                          {detail.photo && <img src={detail.photo} alt={b.spotTitle} />}
-                          <div className="booking-list-detail-text">
-                            <p className="booking-list-detail-address">{detail.address || b.spotTitle}</p>
-                            <p>
-                              {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
-              );
-            })}
+                <p className="booking-list-sub">
+                  {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
+                </p>
+                <div className="booking-list-divider" />
+                <button
+                  type="button"
+                  className="booking-list-rebook-btn"
+                  disabled={!b.spotId}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (b.spotId) navigate(`/r/spot/${b.spotId}`);
+                  }}
+                >
+                  Rebook
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

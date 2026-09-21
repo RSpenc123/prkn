@@ -16,6 +16,7 @@ import Confirmation from './Pages/Booking/Confirmation';
 import SignIn from './Pages/Account/SignIn';
 import MyAccount from './Pages/Account/MyAccount';
 import ManageBookings from './Pages/Account/ManageBookings';
+import BookedSpotDetail from './Pages/Account/BookedSpotDetail';
 import { Outlet } from 'react-router-dom';
 
 function BookingLayoutRoute() {
@@ -36,6 +37,7 @@ function App() {
    <Route path="/signin" element={<SignIn/>} />
    <Route path="/account" element={<MyAccount/>} />
    <Route path="/account/bookings" element={<ManageBookings/>} />
+   <Route path="/account/bookings/:spotId" element={<BookedSpotDetail/>} />
 
    <Route path="/r/:addressId" element={<BookingLayoutRoute/>}>
      <Route index element={<SpotsList/>} />
