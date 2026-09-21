@@ -57,31 +57,36 @@ export default function Header() {
       <img className="site-header-logo" src={logo} alt="PRK'n" onClick={goHome} />
 
       {isSignedIn ? (
-        <div className="site-header-menu" ref={menuRef}>
-          <button
-            type="button"
-            className="site-header-burger"
-            aria-label="Account menu"
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            <img src={burger} alt="" />
+        <div className="site-header-actions">
+          <button type="button" className="site-header-my-spots" onClick={() => navigate("/account/bookings")}>
+            My Spots
           </button>
-          {menuOpen && (
-            <div className="site-header-dropdown">
-              <button type="button" onClick={() => { setMenuOpen(false); navigate("/account/bookings"); }}>
-                Manage Bookings
-              </button>
-              <button type="button" onClick={() => { setMenuOpen(false); navigate("/account"); }}>
-                My Account
-              </button>
-              <button type="button" onClick={handleLogout}>
-                Log Out
-              </button>
-              <button type="button" className="site-header-danger" onClick={handleDeleteAccount} disabled={deleting}>
-                {deleting ? "Deleting..." : "Delete Account"}
-              </button>
-            </div>
-          )}
+          <div className="site-header-menu" ref={menuRef}>
+            <button
+              type="button"
+              className="site-header-burger"
+              aria-label="Account menu"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <img src={burger} alt="" />
+            </button>
+            {menuOpen && (
+              <div className="site-header-dropdown">
+                <button type="button" onClick={() => { setMenuOpen(false); navigate("/account/bookings"); }}>
+                  Manage Bookings
+                </button>
+                <button type="button" onClick={() => { setMenuOpen(false); navigate("/account"); }}>
+                  My Account
+                </button>
+                <button type="button" onClick={handleLogout}>
+                  Log Out
+                </button>
+                <button type="button" className="site-header-danger" onClick={handleDeleteAccount} disabled={deleting}>
+                  {deleting ? "Deleting..." : "Delete Account"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <button type="button" className="site-header-signup" onClick={() => navigate("/signin")}>

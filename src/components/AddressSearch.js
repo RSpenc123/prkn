@@ -16,6 +16,7 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [searching, setSearching] = useState(false);
+  const [locating, setLocating] = useState(false);
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
@@ -74,6 +75,46 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
     selectedCoordsRef.current = null; // typing invalidates a previously picked suggestion
   };
 
+  // Fills the search box with the guest's current location (reverse-
+  // geocoded into a readable address) without searching automatically —
+  // they still click Find Spots themselves, same as picking an
+  // autocomplete suggestion or typing an address by hand.
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Your browser doesn't support location. Try entering an address instead.");
+      return;
+    }
+    setError("");
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
+        selectedCoordsRef.current = coords;
+        try {
+          const google = await loadGoogleMapsScript();
+          const geocoder = new google.maps.Geocoder();
+          const { results } = await geocoder.geocode({ location: coords });
+          setQuery(results?.[0]?.formatted_address || "Current location");
+        } catch {
+          // Reverse geocoding is just for a nice label — the coords
+          // themselves are already set, so search still works fine
+          // without it.
+          setQuery("Current location");
+        } finally {
+          setLocating(false);
+        }
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setError("Location access was denied. Enable it in your browser's site settings, or enter an address instead.");
+        } else {
+          setError("Couldn't get your location. Try entering an address instead.");
+        }
+      }
+    );
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!query.trim()) {
@@ -86,16 +127,35 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
   return (
     <form className={`address-search ${className}`} onSubmit={handleSubmit}>
       <div className="address-search-row">
-        <input
-          ref={inputRef}
-          className="address-search-input"
-          type="text"
-          value={query}
-          placeholder={placeholder}
-          onChange={handleChange}
-          aria-label="Address"
-          autoComplete="off"
-        />
+        <div className="address-search-input-row">
+          <input
+            ref={inputRef}
+            className="address-search-input"
+            type="text"
+            value={query}
+            placeholder={placeholder}
+            onChange={handleChange}
+            aria-label="Address"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            className="address-search-locate-btn"
+            onClick={handleUseLocation}
+            disabled={locating}
+            aria-label="Use my location"
+            title="Use my location"
+          >
+            {locating ? (
+              <span className="address-search-locate-spinner" />
+            ) : (
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 21s-7-7.2-7-12a7 7 0 0 1 14 0c0 4.8-7 12-7 12Z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+            )}
+          </button>
+        </div>
         <button className="address-search-button" type="submit" disabled={searching}>
           {searching ? "Searching..." : "Find Spots"}
         </button>

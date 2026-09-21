@@ -28,6 +28,28 @@
   background: #E0941A;
 }
 
+.site-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-header-my-spots {
+  background: white;
+  color: #1E88E5;
+  border: 1.5px solid #1E88E5;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.site-header-my-spots:hover {
+  background: #eef6fd;
+}
+
 .site-header-menu {
   position: relative;
 }
