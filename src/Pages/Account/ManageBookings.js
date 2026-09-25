@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../images/logo.png";
 import { useAuth } from "../../context/AuthContext";
-import { getMyBookings } from "../../api/client";
+import { getMyBookings, getSpot } from "../../api/client";
 import "../Booking/booking.css";
 import "./account.css";
 
@@ -15,6 +15,12 @@ function formatDateTime(ms) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatAddress(address) {
+  return [address.line1, address.city, address.state && address.zip ? `${address.state} ${address.zip}` : address.state]
+    .filter(Boolean)
+    .join(", ");
 }
 
 // Drops a trailing ".00" so a whole-dollar amount reads as "$1" rather
@@ -31,6 +37,7 @@ export default function ManageBookings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [bookings, setBookings] = useState([]);
+  const [addresses, setAddresses] = useState({}); // spotId -> formatted address
   const [filter, setFilter] = useState("All");
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -44,8 +51,25 @@ export default function ManageBookings() {
       .then((list) => {
         if (cancelled) return;
         // Most recent first.
-        setBookings([...list].sort((a, b) => (b.startTime || 0) - (a.startTime || 0)));
+        const sorted = [...list].sort((a, b) => (b.startTime || 0) - (a.startTime || 0));
+        setBookings(sorted);
         setLoading(false);
+
+        // The booking record's own address fields aren't reliably filled
+        // in (some come back empty, falling back to "Parking spot") — the
+        // spot's own record is the same reliable source the detail page
+        // already uses, so fetch that instead of trusting the booking.
+        const spotIds = [...new Set(sorted.map((b) => b.spotId).filter(Boolean))];
+        Promise.all(
+          spotIds.map((id) =>
+            getSpot(id)
+              .then(({ address, spot }) => [id, address ? formatAddress(address) : spot?.title || null])
+              .catch(() => [id, null])
+          )
+        ).then((pairs) => {
+          if (cancelled) return;
+          setAddresses(Object.fromEntries(pairs.filter(([, addr]) => addr)));
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -115,7 +139,7 @@ export default function ManageBookings() {
                 onClick={() => b.spotId && navigate(`/account/bookings/${b.spotId}`)}
               >
                 <div className="booking-list-top-row">
-                  <p className="booking-list-title">{b.spotTitle}</p>
+                  <p className="booking-list-title">{(b.spotId && addresses[b.spotId]) || b.spotTitle}</p>
                   <div className="booking-list-top-right">
                     <span className="booking-list-amount">${formatMoney(b.amount)}</span>
                     <span className={`booking-list-status ${(b.status || "").toLowerCase()}`}>
@@ -123,9 +147,11 @@ export default function ManageBookings() {
                     </span>
                   </div>
                 </div>
-                <p className="booking-list-sub">
-                  {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
-                </p>
+                {b.startTime && (
+                  <p className="booking-list-sub">
+                    {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
+                  </p>
+                )}
                 <div className="booking-list-divider" />
                 <button
                   type="button"
