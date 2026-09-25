@@ -17,6 +17,7 @@ import SignIn from './Pages/Account/SignIn';
 import MyAccount from './Pages/Account/MyAccount';
 import ManageBookings from './Pages/Account/ManageBookings';
 import BookedSpotDetail from './Pages/Account/BookedSpotDetail';
+import ValidateParking from './Pages/ValidateParking';
 import { Outlet } from 'react-router-dom';
 
 function BookingLayoutRoute() {
@@ -38,6 +39,7 @@ function App() {
    <Route path="/account" element={<MyAccount/>} />
    <Route path="/account/bookings" element={<ManageBookings/>} />
    <Route path="/account/bookings/:spotId" element={<BookedSpotDetail/>} />
+   <Route path="/validate" element={<ValidateParking/>} />
 
    <Route path="/r/:addressId" element={<BookingLayoutRoute/>}>
      <Route index element={<SpotsList/>} />
