@@ -20,7 +20,9 @@ export function searchAddress({ query }) {
   const match = Object.values(mockAddresses).find((a) =>
     `${a.line1} ${a.city} ${a.state} ${a.zip}`.toLowerCase().includes(q)
   );
-  return delay(match ? { addressId: match.id, address: match } : null);
+  if (!match) return delay(null);
+  const spots = mockSpots.filter((s) => s.addressId === match.id);
+  return delay({ addressId: match.id, address: match, spots });
 }
 
 export function getSpotsByAddress(addressId) {

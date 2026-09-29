@@ -286,7 +286,16 @@ export async function searchAddress({ query, coords }) {
   if (!spots.length) return null;
   const nearby = spots.filter((s) => haversineMeters(s.latitude, s.longitude, geo.lat, geo.lng) <= NEARBY_METERS);
   const pool = nearby.length ? nearby : [spots[0]];
-  return { addressId: encodeAddressKey(pool[0].latitude, pool[0].longitude), address: mapAddressFromSpot(pool[0]) };
+  // Also hand back the mapped spot list itself (identical shape to what
+  // getSpotsByAddress returns) so the landing page can pass it straight
+  // into the results page via navigation state. That page then skips
+  // re-calling this same (slow, backend-side) search endpoint a second
+  // time for the address it was just given.
+  return {
+    addressId: encodeAddressKey(pool[0].latitude, pool[0].longitude),
+    address: mapAddressFromSpot(pool[0]),
+    spots: pool.map(mapSpot),
+  };
 }
 
 export async function getSpotsByAddress(addressId) {

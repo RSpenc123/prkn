@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
 import { getSpotsByAddress, getBookedRanges, getSpot } from "../../api/client";
@@ -75,6 +75,7 @@ function sortByLeadingNumber(spots) {
 export default function SpotsList() {
   const { addressId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { update } = useBooking();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -85,7 +86,16 @@ export default function SpotsList() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    getSpotsByAddress(addressId)
+    // The address search on the landing page already ran this same search
+    // and hands its result forward via navigation state — reuse it instead
+    // of hitting the (slow) search endpoint again. A direct link (QR code,
+    // refresh, bookmark) won't have that state, so it falls back to
+    // fetching normally.
+    const preloaded = location.state?.spots;
+    const fetchSpots = preloaded
+      ? Promise.resolve({ address: location.state.address, spots: preloaded })
+      : getSpotsByAddress(addressId);
+    fetchSpots
       .then(async ({ address, spots }) => {
         if (cancelled) return;
         const sorted = sortByLeadingNumber(spots);

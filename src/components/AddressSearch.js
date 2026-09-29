@@ -62,7 +62,9 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
         setError("No spots found at that address yet.");
         return;
       }
-      navigate(`/r/${result.addressId}`);
+      // Hand the already-fetched address + spots forward so the results
+      // page doesn't have to call the same search endpoint again.
+      navigate(`/r/${result.addressId}`, { state: { address: result.address, spots: result.spots } });
     } catch (err) {
       setError(err.message || "Something went wrong searching that address.");
     } finally {
