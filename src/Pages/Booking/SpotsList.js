@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
-import { getSpotsByAddress, getBookedRanges, getSpot } from "../../api/client";
+import { getSpotsByAddress, getBookedRangesBatch, getSpot } from "../../api/client";
 
 function todayStr() {
   const d = new Date();
@@ -14,21 +14,25 @@ function todayStr() {
 // this checks actual booked ranges directly instead: booked right now ->
 // red "Currently Unavailable", booked at some other time -> yellow
 // "Partially Available", nothing booked at all -> green "Available".
-async function computeBookingStatus(spot) {
+//
+// Takes the already-fetched rangesByAvailabilityId map (one batch request
+// for every spot's every slot, see the main effect below) instead of
+// fetching per spot — a list of spots each with 30+ listed slots was
+// otherwise making one HTTP request per slot, which is what made this page
+// slow to load.
+function computeBookingStatus(spot, rangesByAvailabilityId) {
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const today = todayStr();
   let anyBooking = false;
   let currentlyUnavailable = false;
-  await Promise.all(
-    (spot.availability || []).map(async (a) => {
-      const ranges = await getBookedRanges(a.availabilityId).catch(() => []);
-      if (ranges.length) anyBooking = true;
-      if (a.date === today && ranges.some((r) => nowMin >= r.startMin && nowMin < r.endMin)) {
-        currentlyUnavailable = true;
-      }
-    })
-  );
+  for (const a of spot.availability || []) {
+    const ranges = rangesByAvailabilityId.get(a.availabilityId) || [];
+    if (ranges.length) anyBooking = true;
+    if (a.date === today && ranges.some((r) => nowMin >= r.startMin && nowMin < r.endMin)) {
+      currentlyUnavailable = true;
+    }
+  }
   if (currentlyUnavailable) return "unavailable";
   if (anyBooking) return "partial";
   return "available";
@@ -99,13 +103,13 @@ export default function SpotsList() {
       .then(async ({ address, spots }) => {
         if (cancelled) return;
         const sorted = sortByLeadingNumber(spots);
+        const allAvailabilityIds = sorted.flatMap((spot) => (spot.availability || []).map((a) => a.availabilityId));
+        const rangesByAvailabilityId = await getBookedRangesBatch(allAvailabilityIds).catch(() => new Map());
+        if (cancelled) return;
         const withBookingStatus = await Promise.all(
           sorted.map(async (spot) => {
-            const [bookingStatus, pricePerHour] = await Promise.all([
-              computeBookingStatus(spot),
-              resolveListPrice(spot),
-            ]);
-            return { ...spot, bookingStatus, pricePerHour };
+            const pricePerHour = await resolveListPrice(spot);
+            return { ...spot, bookingStatus: computeBookingStatus(spot, rangesByAvailabilityId), pricePerHour };
           })
         );
         if (cancelled) return;

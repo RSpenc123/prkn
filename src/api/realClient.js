@@ -323,20 +323,9 @@ export async function getSpot(spotId) {
 // against a live response, so this parses defensively and — if a booking
 // entry doesn't look like what's expected — simply skips it rather than
 // risk showing wrong blocked ranges.
-export async function getBookedRanges(availabilityId) {
-  if (!availabilityId) return [];
-  let res;
-  try {
-    res = await request("/api/getBookingsByAvailabilitytId", {
-      method: "POST",
-      body: { availability_id: availabilityId },
-    });
-  } catch {
-    return [];
-  }
-  const bookings = Array.isArray(res.data) ? res.data : [];
+function bookingsToRanges(bookings) {
   const ranges = [];
-  for (const booking of bookings) {
+  for (const booking of Array.isArray(bookings) ? bookings : []) {
     if (booking.status && /cancel/i.test(booking.status)) continue;
     const entries = Array.isArray(booking.slots) && booking.slots.length ? booking.slots : [booking];
     for (const entry of entries) {
@@ -352,6 +341,46 @@ export async function getBookedRanges(availabilityId) {
     }
   }
   return ranges;
+}
+
+export async function getBookedRanges(availabilityId) {
+  if (!availabilityId) return [];
+  let res;
+  try {
+    res = await request("/api/getBookingsByAvailabilitytId", {
+      method: "POST",
+      body: { availability_id: availabilityId },
+    });
+  } catch {
+    return [];
+  }
+  return bookingsToRanges(res.data);
+}
+
+// Same as getBookedRanges, but for many availability ids in a single request
+// instead of one request per id — a spots list checking every slot of every
+// spot was making one HTTP round trip per slot (a single spot can easily
+// have 30+ listed slots), which is what made that page slow to load.
+// Returns a Map of availabilityId -> ranges, matching getBookedRanges' shape
+// per entry.
+export async function getBookedRangesBatch(availabilityIds) {
+  const ids = (availabilityIds || []).filter(Boolean);
+  if (!ids.length) return new Map();
+  let res;
+  try {
+    res = await request("/api/getBookingsByAvailabilityIds", {
+      method: "POST",
+      body: { availability_ids: ids },
+    });
+  } catch {
+    return new Map();
+  }
+  const grouped = res.data && typeof res.data === "object" ? res.data : {};
+  const map = new Map();
+  for (const id of ids) {
+    map.set(id, bookingsToRanges(grouped[id]));
+  }
+  return map;
 }
 
 export async function signUp({ contact, method, password, name }) {
