@@ -25,6 +25,8 @@ export const signUp = client.signUp;
 export const signIn = client.signIn;
 export const verifyCode = client.verifyCode;
 export const resendCode = client.resendCode;
+export const forgotPassword = client.forgotPassword;
+export const resetPassword = client.resetPassword;
 export const createPaymentIntent = client.createPaymentIntent;
 export const createBooking = client.createBooking;
 // Only meaningful against the real backend — see realClient.js's doc

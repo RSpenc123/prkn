@@ -448,12 +448,45 @@ export async function ensureToken({ token, contact, method, password }) {
   return result.token;
 }
 
+// Sends an OTP to whichever contact method was given (the backend only
+// sends to that one channel, not every channel on file - see the note in
+// auth.service.ts's forgotPassword). Throws for "no account with that
+// phone/email" so the caller can show that inline, same pattern as signIn.
+export async function forgotPassword({ contact, method }) {
+  const res = await request("/api/forgotPassword", {
+    method: "POST",
+    body: {
+      text: method === "phone" ? toE164(contact) : contact,
+      type: method,
+    },
+  });
+  if (!res.status) throw new Error(messageText(res.message));
+  return { userId: res.data._id };
+}
+
+// Sets the new password. Requires the token verifyCode returned for this
+// same user - the backend's resetPassword route is otherwise unauthenticated,
+// so holding a valid post-OTP token is what actually proves the OTP step
+// happened for forgot-password's purposes.
+export async function resetPassword({ userId, password, token }) {
+  const res = await request("/api/resetPassword", {
+    method: "POST",
+    body: { user_id: userId, password, token },
+  });
+  if (!res.status) throw new Error(messageText(res.message));
+  return { success: true };
+}
+
 export async function verifyCode({ userId, type, code }) {
   const res = await request("/api/verifyOtp", {
     method: "POST",
     body: { user_id: userId, type, otp: Number(code) },
   });
-  return { verified: !!res.status };
+  // token/name come back whenever the OTP is valid - unused by the signup/
+  // signin flow (which gets its token via ensureToken instead), but the
+  // forgot-password flow needs both: the token to authorize resetPassword,
+  // and the name to log the user straight in once their password is reset.
+  return { verified: !!res.status, token: res.data?.token, name: res.data?.name };
 }
 
 export async function resendCode({ userId, type }) {

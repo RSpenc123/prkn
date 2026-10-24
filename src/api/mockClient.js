@@ -53,11 +53,19 @@ export function signIn({ contact, method, password }) {
 
 export function verifyCode({ userId, code }) {
   const ok = /^\d{4}$/.test(code);
-  return delay({ verified: ok });
+  return delay({ verified: ok, token: ok ? randomId("token") : null, name: "Demo User" });
 }
 
 export function resendCode({ userId }) {
   return delay({ sent: true });
+}
+
+export function forgotPassword({ contact, method }) {
+  return delay({ userId: randomId("user") });
+}
+
+export function resetPassword({ userId, password, token }) {
+  return delay({ success: true });
 }
 
 export function createPaymentIntent({ amount }) {
