@@ -93,9 +93,17 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
         const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
         selectedCoordsRef.current = coords;
         try {
-          const google = await loadGoogleMapsScript();
+          // Google's Maps script can finish loading fine over the network
+          // but still fail authentication (wrong domain, API not enabled,
+          // billing/quota issue) — that failure doesn't always come back as
+          // a normal rejection, so without a hard timeout here a broken key
+          // can leave this spinning forever instead of ever reaching the
+          // catch/finally below.
+          const withTimeout = (promise, ms) =>
+            Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), ms))]);
+          const google = await withTimeout(loadGoogleMapsScript(), 8000);
           const geocoder = new google.maps.Geocoder();
-          const { results } = await geocoder.geocode({ location: coords });
+          const { results } = await withTimeout(geocoder.geocode({ location: coords }), 8000);
           setQuery(results?.[0]?.formatted_address || "Current location");
         } catch {
           // Reverse geocoding is just for a nice label — the coords
