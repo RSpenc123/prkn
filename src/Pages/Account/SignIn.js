@@ -428,21 +428,19 @@ export default function SignIn() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {mode === "signin" && (
-                <button
-                  type="button"
-                  className="resend-link"
-                  style={{ marginTop: -8, marginBottom: 8 }}
-                  onClick={() => {
-                    setError("");
-                    setForgotMethod(method);
-                    setForgotContact(contact);
-                    setShowForgot(true);
-                  }}
-                >
-                  Forgot password?
-                </button>
-              )}
+              <button
+                type="button"
+                className="resend-link"
+                style={{ marginTop: -8, marginBottom: 8 }}
+                onClick={() => {
+                  setError("");
+                  setForgotMethod(method);
+                  setForgotContact(contact);
+                  setShowForgot(true);
+                }}
+              >
+                Forgot password?
+              </button>
               {mode === "signup" && (
                 <div className="booking-field">
                   <label htmlFor="confirm-password">Confirm password</label>
