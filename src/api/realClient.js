@@ -79,11 +79,23 @@ function toE164(digits) {
   return `+1${digits}`;
 }
 
-function messageText(message) {
-  if (Array.isArray(message)) {
+function messageText(res) {
+  const message = res?.message;
+  if (Array.isArray(message) && message.length) {
     return message.map((m) => (typeof m === "string" ? m : m.message || JSON.stringify(m))).join(" ");
   }
-  return message || "Something went wrong.";
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+  // The backend's Joi validation-failure responses come back with an empty
+  // `message` and the actual reason (e.g. the password complexity rule) in
+  // `err` instead — without this, every validation error surfaced here as
+  // a generic "Something went wrong." instead of telling the user what to
+  // fix.
+  if (Array.isArray(res?.err) && res.err.length) {
+    return res.err.map((m) => (typeof m === "string" ? m : m.message || JSON.stringify(m))).join(" ");
+  }
+  return "Something went wrong.";
 }
 
 async function request(path, { method = "GET", body, token } = {}) {
@@ -400,7 +412,7 @@ export async function signUp({ contact, method, password, name }) {
   // that account's data instead of an error). Treat the latter as success.
   const data = res.data;
   if (!res.status && !data?._id) {
-    throw new Error(messageText(res.message));
+    throw new Error(messageText(res));
   }
   return {
     userId: data._id,
@@ -426,7 +438,7 @@ export async function signIn({ contact, method, password }) {
     },
   });
   if (!res.status) {
-    throw new Error(messageText(res.message));
+    throw new Error(messageText(res));
   }
   const data = res.data;
   return {
@@ -460,7 +472,7 @@ export async function forgotPassword({ contact, method }) {
       type: method,
     },
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return { userId: res.data._id };
 }
 
@@ -473,7 +485,7 @@ export async function resetPassword({ userId, password, token }) {
     method: "POST",
     body: { user_id: userId, password, token },
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return { success: true };
 }
 
@@ -507,7 +519,7 @@ export async function createPaymentIntent({ amount, bookingId, token }) {
     body: { amount, booking_id: bookingId },
     token,
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return {
     paymentIntentId: res.data.paymentIntentId,
     clientSecret: res.data.paymentIntent,
@@ -593,7 +605,7 @@ export async function createPendingBooking({
     },
     token,
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   const bookingId = (res.data || {})._id || "";
   if (!bookingId) throw new Error("Couldn't reserve this spot. Try again.");
   return { bookingId, spotId, date, startTime, endTime };
@@ -618,7 +630,7 @@ export async function confirmBookingPayment({ token, bookingId, spotId, amount, 
     },
     token,
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return {
     bookingId,
     confirmationCode: bookingId.slice(-6).toUpperCase(),
@@ -660,7 +672,7 @@ function fromE164(phone) {
 
 export async function getProfile({ token }) {
   const res = await request("/api/getProfile", { token });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   const data = res.data || {};
   return {
     name: data.name || "",
@@ -679,7 +691,7 @@ export async function updateAccountProfile({ token, name, email, phone }) {
     },
     token,
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return { ok: true };
 }
 
@@ -689,7 +701,7 @@ export async function changeAccountPassword({ token, oldPassword, newPassword })
     body: { old_password: oldPassword, password: newPassword },
     token,
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return { ok: true };
 }
 
@@ -720,7 +732,7 @@ export async function getMyBookings({ token }) {
     body: {},
     token,
   });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   const list = Array.isArray(res.data) ? res.data : [];
   return list.map(mapMyBooking);
 }
@@ -741,6 +753,6 @@ export async function logoutUser({ token }) {
 // account-deletion endpoint that exists.
 export async function deleteAccount({ userId, token }) {
   const res = await request(`/api/deleteUser/${userId}`, { method: "DELETE", token });
-  if (!res.status) throw new Error(messageText(res.message));
+  if (!res.status) throw new Error(messageText(res));
   return { ok: true };
 }

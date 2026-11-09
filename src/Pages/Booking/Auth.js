@@ -4,6 +4,7 @@ import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
 import { useAuth } from "../../context/AuthContext";
 import { signIn, signUp, verifyCode, resendCode, forgotPassword, resetPassword, IS_MOCK } from "../../api/client";
+import PasswordField, { isValidPassword, PASSWORD_REQUIREMENTS_TEXT } from "../../components/PasswordField";
 
 const CODE_LENGTH = 4;
 
@@ -71,8 +72,8 @@ export default function Auth() {
       setError(`Enter your ${method === "phone" ? "phone number" : "email address"}.`);
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!isValidPassword(password)) {
+      setError(PASSWORD_REQUIREMENTS_TEXT);
       return;
     }
     if (password !== confirmPassword) {
@@ -176,7 +177,7 @@ export default function Auth() {
   const handleForgotResetPassword = async (e) => {
     e.preventDefault();
     setError("");
-    if (newPassword.length < 8) return setError("Password must be at least 8 characters.");
+    if (!isValidPassword(newPassword)) return setError(PASSWORD_REQUIREMENTS_TEXT);
     if (newPassword !== confirmNewPassword) return setError("Passwords don't match.");
     setSubmitting(true);
     try {
@@ -298,26 +299,21 @@ export default function Auth() {
           {forgotStep === "newPassword" && (
             <form className="booking-form" onSubmit={handleForgotResetPassword}>
               <p className="help-text">Choose a new password for your account.</p>
-              <div className="booking-field">
-                <label htmlFor="new-password">New password</label>
-                <input
-                  id="new-password"
-                  className="booking-input"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              <div className="booking-field">
-                <label htmlFor="confirm-new-password">Confirm new password</label>
-                <input
-                  id="confirm-new-password"
-                  className="booking-input"
-                  type="password"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                />
-              </div>
+              <PasswordField
+                id="new-password"
+                label="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                helpText={PASSWORD_REQUIREMENTS_TEXT}
+              />
+              <PasswordField
+                id="confirm-new-password"
+                label="Confirm new password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
               {error && <p className="error-text">{error}</p>}
               <button className="btn-accent" type="submit" disabled={submitting}>
                 {submitting ? "Saving..." : "Reset Password"}
@@ -330,13 +326,19 @@ export default function Auth() {
           <div className="auth-tabs">
             <div
               className={`auth-tab ${mode === "signup" ? "active" : ""}`}
-              onClick={() => setMode("signup")}
+              onClick={() => {
+                setError("");
+                setMode("signup");
+              }}
             >
               Sign Up
             </div>
             <div
               className={`auth-tab ${mode === "signin" ? "active" : ""}`}
-              onClick={() => setMode("signin")}
+              onClick={() => {
+                setError("");
+                setMode("signin");
+              }}
             >
               Sign In
             </div>
@@ -385,16 +387,14 @@ export default function Auth() {
               />
             </div>
 
-            <div className="booking-field">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                className="booking-input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <PasswordField
+              id="password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              helpText={mode === "signup" ? PASSWORD_REQUIREMENTS_TEXT : undefined}
+            />
 
             <button
               type="button"
@@ -411,16 +411,13 @@ export default function Auth() {
             </button>
 
             {mode === "signup" && (
-              <div className="booking-field">
-                <label htmlFor="confirm-password">Confirm password</label>
-                <input
-                  id="confirm-password"
-                  className="booking-input"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
+              <PasswordField
+                id="confirm-password"
+                label="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
             )}
 
             {error && <p className="error-text">{error}</p>}
