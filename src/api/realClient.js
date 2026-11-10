@@ -288,6 +288,33 @@ async function geocodeAddress(query) {
   });
 }
 
+function normalizeAddressLine(line) {
+  return (line || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Distance alone isn't enough to decide "these spots belong to the same
+// listing" — two separate lots (e.g. Lot A and Lot B next door to each
+// other) can easily sit within NEARBY_METERS of one another, and grouping
+// by distance alone would merge their spots into one address's list.
+// NEARBY_METERS exists to tolerate GPS/geocoding jitter for the SAME
+// address (spots entered at an identical address can still geocode a few
+// meters apart) — so distance narrows down *which location*, and the
+// host's own entered street address then decides *which lot*, among
+// whatever's within that radius.
+function scopeToSameAddress(spots, lat, lng) {
+  const withDistance = spots
+    .map((s) => ({ spot: s, distance: haversineMeters(s.latitude, s.longitude, lat, lng) }))
+    .sort((a, b) => a.distance - b.distance);
+  const nearby = withDistance.filter((s) => s.distance <= NEARBY_METERS);
+  const candidates = nearby.length ? nearby : withDistance.slice(0, 1);
+  if (!candidates.length) return [];
+  const targetLine = normalizeAddressLine(candidates[0].spot.address_line_1);
+  if (!targetLine) return candidates.map((c) => c.spot);
+  return candidates
+    .filter((c) => normalizeAddressLine(c.spot.address_line_1) === targetLine)
+    .map((c) => c.spot);
+}
+
 // `coords`, when provided (the user picked a Places autocomplete
 // suggestion), skips geocoding entirely and searches that exact point —
 // more precise than re-geocoding the typed text.
@@ -296,8 +323,8 @@ export async function searchAddress({ query, coords }) {
   if (!geo) return null;
   const spots = await searchParkingRaw({ latitude: geo.lat, longitude: geo.lng });
   if (!spots.length) return null;
-  const nearby = spots.filter((s) => haversineMeters(s.latitude, s.longitude, geo.lat, geo.lng) <= NEARBY_METERS);
-  const pool = nearby.length ? nearby : [spots[0]];
+  const pool = scopeToSameAddress(spots, geo.lat, geo.lng);
+  if (!pool.length) return null;
   // Also hand back the mapped spot list itself (identical shape to what
   // getSpotsByAddress returns) so the landing page can pass it straight
   // into the results page via navigation state. That page then skips
@@ -313,8 +340,7 @@ export async function searchAddress({ query, coords }) {
 export async function getSpotsByAddress(addressId) {
   const { lat, lng } = decodeAddressKey(addressId);
   const spots = await searchParkingRaw({ latitude: lat, longitude: lng });
-  const nearby = spots.filter((s) => haversineMeters(s.latitude, s.longitude, lat, lng) <= NEARBY_METERS);
-  const pool = nearby.length ? nearby : spots.slice(0, 1);
+  const pool = scopeToSameAddress(spots, lat, lng);
   const address = pool.length
     ? mapAddressFromSpot(pool[0])
     : { id: addressId, line1: "Address", city: "", state: "", zip: "" };
