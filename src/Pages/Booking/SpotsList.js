@@ -55,14 +55,20 @@ async function resolveListPrice(spot) {
   }
 }
 
-// Hosts often title/describe spots like "Spot #1", "Spot #2 - near the
+// Hosts often describe spots like "Spot #1", "Spot #2 - near the
 // entrance", etc. Sort by that leading number so the list reads in the
 // order hosts intended rather than whatever order the database returns.
+// Checks description before title — title is mapSpot()'s address_line_1,
+// the same street address shared by every spot at this location, so
+// matching it first was picking up the house number instead of the
+// host's own per-spot numbering (and sorting "1, 2, 3, 20" as whatever
+// order the database happened to return, since every spot's title has
+// the exact same leading digits).
 // Spots with no leading number sort after the numbered ones, in whatever
 // order they arrived in.
 function sortByLeadingNumber(spots) {
   const withIndex = spots.map((spot, index) => {
-    const match = /(\d+)/.exec(spot.title || spot.description || "");
+    const match = /(\d+)/.exec(spot.description || spot.title || "");
     return { spot, index, num: match ? parseInt(match[1], 10) : null };
   });
   withIndex.sort((a, b) => {
