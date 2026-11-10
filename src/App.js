@@ -7,6 +7,7 @@ import Mobile from './Pages/Mobile';
 import { BookingProvider } from './context/BookingContext';
 import { AuthProvider } from './context/AuthContext';
 import SpotsList from './Pages/Booking/SpotsList';
+import NearbySpots from './Pages/NearbySpots';
 import SpotDetail from './Pages/Booking/SpotDetail';
 import Auth from './Pages/Booking/Auth';
 import VerifyCode from './Pages/Booking/VerifyCode';
@@ -40,6 +41,7 @@ function App() {
    <Route path="/account/bookings" element={<ManageBookings/>} />
    <Route path="/account/bookings/:spotId" element={<BookedSpotDetail/>} />
    <Route path="/validate" element={<ValidateParking/>} />
+   <Route path="/near/:searchId" element={<NearbySpots/>} />
 
    <Route path="/r/:addressId" element={<BookingLayoutRoute/>}>
      <Route index element={<SpotsList/>} />

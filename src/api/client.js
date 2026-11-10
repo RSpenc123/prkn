@@ -14,8 +14,9 @@ const client = process.env.REACT_APP_API_BASE_URL ? realClient : mockClient;
 // Lets pages drop "Demo" messaging once a real backend is configured.
 export const IS_MOCK = client === mockClient;
 
-export const searchAddress = client.searchAddress;
 export const getSpotsByAddress = client.getSpotsByAddress;
+export const searchNearbySpots = client.searchNearbySpots;
+export const getNearbySpotsById = client.getNearbySpotsById;
 export const getSpot = client.getSpot;
 // Only meaningful against the real backend — mock spots are never
 // "Partially Available", so this is never actually called in mock mode.

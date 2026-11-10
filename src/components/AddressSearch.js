@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { searchAddress } from "../api/client";
+import { searchNearbySpots } from "../api/client";
 import { loadGoogleMapsScript } from "../utils/googleMaps";
 import "./AddressSearch.css";
 
-// Landing-page entry point into the rental flow: type an address, jump to
-// /r/:addressId which lists every spot at that address. Used on both the
+// Landing-page entry point into the rental flow: type a destination, jump
+// to /near/:searchId which shows every address with spots within a mile of
+// it, each labeled with its distance. Picking one from there hands off to
+// /r/:addressId — the same exact-address page QR codes use — so that page
+// (and QR codes themselves) are untouched by this search. Used on both the
 // desktop Landing page and, styled differently via `className`, in place
 // of the mobile page's first "Download here" button.
 //
@@ -57,16 +60,16 @@ export default function AddressSearch({ className = "", placeholder = "Enter an 
     setSearching(true);
     setError("");
     try {
-      const result = await searchAddress({ query: q, coords });
-      if (!result) {
-        setError("No spots found at that address yet.");
+      const result = await searchNearbySpots({ query: q, coords });
+      if (!result || !result.spots.length) {
+        setError("No spots found within a mile of that location yet.");
         return;
       }
-      // Hand the already-fetched address + spots forward so the results
-      // page doesn't have to call the same search endpoint again.
-      navigate(`/r/${result.addressId}`, { state: { address: result.address, spots: result.spots } });
+      // Hand the already-fetched spots forward so the results page doesn't
+      // have to call the same (slow) search endpoint again.
+      navigate(`/near/${result.searchId}`, { state: { spots: result.spots, label: q } });
     } catch (err) {
-      setError(err.message || "Something went wrong searching that address.");
+      setError(err.message || "Something went wrong searching that location.");
     } finally {
       setSearching(false);
     }

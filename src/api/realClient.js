@@ -315,28 +315,6 @@ function scopeToSameAddress(spots, lat, lng) {
     .map((c) => c.spot);
 }
 
-// `coords`, when provided (the user picked a Places autocomplete
-// suggestion), skips geocoding entirely and searches that exact point —
-// more precise than re-geocoding the typed text.
-export async function searchAddress({ query, coords }) {
-  const geo = coords || (await geocodeAddress(query));
-  if (!geo) return null;
-  const spots = await searchParkingRaw({ latitude: geo.lat, longitude: geo.lng });
-  if (!spots.length) return null;
-  const pool = scopeToSameAddress(spots, geo.lat, geo.lng);
-  if (!pool.length) return null;
-  // Also hand back the mapped spot list itself (identical shape to what
-  // getSpotsByAddress returns) so the landing page can pass it straight
-  // into the results page via navigation state. That page then skips
-  // re-calling this same (slow, backend-side) search endpoint a second
-  // time for the address it was just given.
-  return {
-    addressId: encodeAddressKey(pool[0].latitude, pool[0].longitude),
-    address: mapAddressFromSpot(pool[0]),
-    spots: pool.map(mapSpot),
-  };
-}
-
 export async function getSpotsByAddress(addressId) {
   const { lat, lng } = decodeAddressKey(addressId);
   const spots = await searchParkingRaw({ latitude: lat, longitude: lng });
@@ -345,6 +323,45 @@ export async function getSpotsByAddress(addressId) {
     ? mapAddressFromSpot(pool[0])
     : { id: addressId, line1: "Address", city: "", state: "", zip: "" };
   return { address, spots: pool.map(mapSpot) };
+}
+
+const ONE_MILE_METERS = 1609.34;
+
+// For the home page's "find parking near this destination" search — unlike
+// searchAddress/getSpotsByAddress above (which scope down to one specific
+// address, for the QR-code / exact-address lookup flow), this deliberately
+// returns spots across every address within a mile of the searched point,
+// each tagged with its own distance, so the landing page can show "how far
+// away" rather than snapping to a single exact address.
+export async function searchNearbySpots({ query, coords }) {
+  const geo = coords || (await geocodeAddress(query));
+  if (!geo) return null;
+  const spots = await searchParkingRaw({ latitude: geo.lat, longitude: geo.lng });
+  const annotated = spots.map((raw) => ({
+    raw,
+    // The backend's own driving-distance lookup (distance_value, meters)
+    // comes back 0 when that external Distance Matrix call failed, not
+    // only when a spot is truly right at the destination — falling back
+    // to straight-line distance in that case keeps a failed lookup from
+    // sneaking a genuinely-far spot inside the 1-mile radius.
+    meters: typeof raw.distance_value === "number" && raw.distance_value > 0
+      ? raw.distance_value
+      : haversineMeters(raw.latitude, raw.longitude, geo.lat, geo.lng),
+  }));
+  const within = annotated.filter((a) => a.meters <= ONE_MILE_METERS).sort((a, b) => a.meters - b.meters);
+  return {
+    searchId: encodeAddressKey(geo.lat, geo.lng),
+    destination: { lat: geo.lat, lng: geo.lng },
+    spots: within.map(({ raw, meters }) => ({ ...mapSpot(raw), distanceMeters: meters })),
+  };
+}
+
+// Mirrors getSpotsByAddress's "direct link with no preloaded state" path —
+// a bookmarked or refreshed /near/:searchId page re-derives the original
+// search point from the URL and re-runs the same nearby search.
+export async function getNearbySpotsById(searchId) {
+  const { lat, lng } = decodeAddressKey(searchId);
+  return searchNearbySpots({ coords: { lat, lng } });
 }
 
 export async function getSpot(spotId) {

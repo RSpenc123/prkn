@@ -14,17 +14,6 @@ function randomId(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function searchAddress({ query }) {
-  const q = (query || "").trim().toLowerCase();
-  if (!q) return delay(null);
-  const match = Object.values(mockAddresses).find((a) =>
-    `${a.line1} ${a.city} ${a.state} ${a.zip}`.toLowerCase().includes(q)
-  );
-  if (!match) return delay(null);
-  const spots = mockSpots.filter((s) => s.addressId === match.id);
-  return delay({ addressId: match.id, address: match, spots });
-}
-
 export function getSpotsByAddress(addressId) {
   const address = mockAddresses[addressId] || {
     id: addressId,
@@ -35,6 +24,26 @@ export function getSpotsByAddress(addressId) {
   };
   const spots = mockSpots.filter((s) => s.addressId === addressId);
   return delay({ address, spots });
+}
+
+// Mock mode's two demo addresses have no real coordinates, so there's no
+// real distance to compute — just return both, each spot tagged with a
+// fabricated distance, so the "nearby spots" list has something real to
+// render while developing without a backend. Overrides title to the
+// shared street address (mockSpots' own title is each spot's distinct
+// description, used as-is by getSpotsByAddress above) — matching what the
+// real mapSpot() returns, since NearbySpots groups listings by that field.
+export function searchNearbySpots() {
+  const spots = Object.values(mockAddresses).flatMap((address, i) =>
+    mockSpots
+      .filter((s) => s.addressId === address.id)
+      .map((s) => ({ ...s, title: address.line1, distanceMeters: (i + 1) * 500 }))
+  );
+  return delay({ searchId: "near_demo", destination: null, spots });
+}
+
+export function getNearbySpotsById() {
+  return searchNearbySpots();
 }
 
 export function getSpot(spotId) {
