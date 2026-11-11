@@ -467,6 +467,30 @@ export async function signUp({ contact, method, password, name }) {
   };
 }
 
+// Guest checkout: phone + name only, no password, no OTP — returns a
+// usable token directly. Backend route is phone-only (POST
+// /api/guestCheckout), matching the UI (no email option for guests).
+export async function guestCheckout({ name, phone }) {
+  const res = await request("/api/guestCheckout", {
+    method: "POST",
+    body: { name, phone_no: toE164(phone) },
+  });
+  if (!res.status) throw new Error(messageText(res));
+  const data = res.data;
+  return {
+    userId: data._id,
+    contact: phone,
+    method: "phone",
+    name: data.name,
+    // Already has a usable token from this one call (no OTP step), same
+    // as signIn below — Profile.js and anything else downstream in the
+    // booking flow gates on this flag to mean "has a real session", not
+    // literally "completed OTP verification".
+    verified: true,
+    token: data.token,
+  };
+}
+
 export async function signIn({ contact, method, password }) {
   const res = await request("/api/loginNew", {
     method: "POST",

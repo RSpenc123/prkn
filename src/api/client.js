@@ -23,6 +23,7 @@ export const getSpot = client.getSpot;
 export const getBookedRanges = client === realClient ? realClient.getBookedRanges : async () => [];
 export const getBookedRangesBatch = client === realClient ? realClient.getBookedRangesBatch : async () => new Map();
 export const signUp = client.signUp;
+export const guestCheckout = client.guestCheckout;
 export const signIn = client.signIn;
 export const verifyCode = client.verifyCode;
 export const resendCode = client.resendCode;

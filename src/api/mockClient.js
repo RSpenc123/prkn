@@ -56,6 +56,10 @@ export function signUp({ contact, method, password, name }) {
   return delay({ userId: randomId("user"), contact, method, name, verified: false, token: null });
 }
 
+export function guestCheckout({ name, phone }) {
+  return delay({ userId: randomId("guest"), contact: phone, method: "phone", name, verified: true, token: randomId("token") });
+}
+
 export function signIn({ contact, method, password }) {
   return delay({ userId: randomId("user"), contact, method, verified: true, token: randomId("token") });
 }

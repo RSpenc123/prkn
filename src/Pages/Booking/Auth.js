@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import BookingLayout from "./BookingLayout";
 import { useBooking } from "../../context/BookingContext";
 import { useAuth } from "../../context/AuthContext";
-import { signIn, signUp, verifyCode, resendCode, forgotPassword, resetPassword, IS_MOCK } from "../../api/client";
+import { signIn, signUp, guestCheckout, verifyCode, resendCode, forgotPassword, resetPassword, IS_MOCK } from "../../api/client";
 import PasswordField, { isValidPassword, PASSWORD_REQUIREMENTS_TEXT } from "../../components/PasswordField";
 
 const CODE_LENGTH = 4;
@@ -23,7 +23,11 @@ export default function Auth() {
   const navigate = useNavigate();
   const { spot, update } = useBooking();
   const { isSignedIn, login } = useAuth();
-  const [mode, setMode] = useState("signup"); // 'signup' | 'signin'
+  // Guest is the default — an account-free option for renters who don't
+  // want to sign up, asking only for a name and phone number with no
+  // password and no OTP step (see guestCheckout in api/client.js and the
+  // backend's guestCheckout route for why that's safe to skip).
+  const [mode, setMode] = useState("guest"); // 'guest' | 'signup' | 'signin'
   const [method, setMethod] = useState("phone"); // 'phone' | 'email'
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
@@ -60,6 +64,30 @@ export default function Auth() {
     navigate(`${base}/profile`);
     return null;
   }
+
+  const handleGuestCheckout = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!name.trim()) {
+      setError("Enter your name.");
+      return;
+    }
+    if (!contact.trim()) {
+      setError("Enter your phone number.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const user = await guestCheckout({ name, phone: contact });
+      update({ user: { ...user } });
+      login({ userId: user.userId, token: user.token, contact: user.contact, method: "phone", name: user.name });
+      navigate(`${base}/profile`);
+    } catch (err) {
+      setError(err.message || "Couldn't continue as guest.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -112,6 +140,18 @@ export default function Auth() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Switching tabs resets contact/method/password rather than carrying them
+  // over — e.g. an email typed in Sign Up would otherwise get run through
+  // the Guest tab's phone-number formatter if left in place.
+  const switchMode = (newMode) => {
+    setError("");
+    setMode(newMode);
+    setMethod("phone");
+    setContact("");
+    setPassword("");
+    setConfirmPassword("");
   };
 
   const resetForgotState = () => {
@@ -325,27 +365,36 @@ export default function Auth() {
         <>
           <div className="auth-tabs">
             <div
+              className={`auth-tab ${mode === "guest" ? "active" : ""}`}
+              onClick={() => switchMode("guest")}
+            >
+              Guest
+            </div>
+            <div
               className={`auth-tab ${mode === "signup" ? "active" : ""}`}
-              onClick={() => {
-                setError("");
-                setMode("signup");
-              }}
+              onClick={() => switchMode("signup")}
             >
               Sign Up
             </div>
             <div
               className={`auth-tab ${mode === "signin" ? "active" : ""}`}
-              onClick={() => {
-                setError("");
-                setMode("signin");
-              }}
+              onClick={() => switchMode("signin")}
             >
               Sign In
             </div>
           </div>
 
-          <form className="booking-form" onSubmit={mode === "signup" ? handleSignUp : handleSignIn}>
-            {mode === "signup" && (
+          {mode === "guest" && (
+            <p className="help-text">
+              Book without creating an account — just your name and phone number, no password or code needed.
+            </p>
+          )}
+
+          <form
+            className="booking-form"
+            onSubmit={mode === "guest" ? handleGuestCheckout : mode === "signup" ? handleSignUp : handleSignIn}
+          >
+            {(mode === "guest" || mode === "signup") && (
               <div className="booking-field">
                 <label htmlFor="name">Full name</label>
                 <input
@@ -357,58 +406,68 @@ export default function Auth() {
               </div>
             )}
 
-            <div className="method-toggle">
-              <div
-                className={`method-option ${method === "phone" ? "selected" : ""}`}
-                onClick={() => setMethod("phone")}
-              >
-                Phone number
+            {mode !== "guest" && (
+              <div className="method-toggle">
+                <div
+                  className={`method-option ${method === "phone" ? "selected" : ""}`}
+                  onClick={() => setMethod("phone")}
+                >
+                  Phone number
+                </div>
+                <div
+                  className={`method-option ${method === "email" ? "selected" : ""}`}
+                  onClick={() => setMethod("email")}
+                >
+                  Email
+                </div>
               </div>
-              <div
-                className={`method-option ${method === "email" ? "selected" : ""}`}
-                onClick={() => setMethod("email")}
-              >
-                Email
-              </div>
-            </div>
+            )}
 
             <div className="booking-field">
-              <label htmlFor="contact">{method === "phone" ? "Phone number" : "Email address"}</label>
+              <label htmlFor="contact">
+                {mode === "guest" || method === "phone" ? "Phone number" : "Email address"}
+              </label>
               <input
                 id="contact"
                 className="booking-input"
-                type={method === "email" ? "email" : "text"}
-                inputMode={method === "phone" ? "numeric" : undefined}
-                value={method === "phone" ? formatPhoneDisplay(contact) : contact}
+                type={mode !== "guest" && method === "email" ? "email" : "text"}
+                inputMode={mode === "guest" || method === "phone" ? "numeric" : undefined}
+                value={mode === "guest" || method === "phone" ? formatPhoneDisplay(contact) : contact}
                 onChange={(e) =>
-                  setContact(method === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value)
+                  setContact(
+                    mode === "guest" || method === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value
+                  )
                 }
-                placeholder={method === "phone" ? "(555) 555-5555" : ""}
+                placeholder={mode === "guest" || method === "phone" ? "(555) 555-5555" : ""}
               />
             </div>
 
-            <PasswordField
-              id="password"
-              label="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              helpText={mode === "signup" ? PASSWORD_REQUIREMENTS_TEXT : undefined}
-            />
+            {mode !== "guest" && (
+              <PasswordField
+                id="password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                helpText={mode === "signup" ? PASSWORD_REQUIREMENTS_TEXT : undefined}
+              />
+            )}
 
-            <button
-              type="button"
-              className="resend-link"
-              style={{ marginTop: -8, marginBottom: 8 }}
-              onClick={() => {
-                setError("");
-                setForgotMethod(method);
-                setForgotContact(contact);
-                setShowForgot(true);
-              }}
-            >
-              Forgot password?
-            </button>
+            {mode === "signin" && (
+              <button
+                type="button"
+                className="resend-link"
+                style={{ marginTop: -8, marginBottom: 8 }}
+                onClick={() => {
+                  setError("");
+                  setForgotMethod(method);
+                  setForgotContact(contact);
+                  setShowForgot(true);
+                }}
+              >
+                Forgot password?
+              </button>
+            )}
 
             {mode === "signup" && (
               <PasswordField
@@ -423,7 +482,13 @@ export default function Auth() {
             {error && <p className="error-text">{error}</p>}
 
             <button className="btn-accent" type="submit" disabled={submitting}>
-              {submitting ? "Please wait..." : mode === "signup" ? "Create Account" : "Sign In"}
+              {submitting
+                ? "Please wait..."
+                : mode === "guest"
+                ? "Continue as Guest"
+                : mode === "signup"
+                ? "Create Account"
+                : "Sign In"}
             </button>
           </form>
         </>
